@@ -56,7 +56,8 @@ services:
       MINIO_ROOT_PASSWORD: *s3-secret-key
     ports:
       # Bound to the host so presigned URLs (signed for S3_PUBLIC_ENDPOINT) work from there.
-      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      # PUBLIC_BIND=0.0.0.0 (deploy/.env) exposes the S3 API to the LAN for a real phone.
+      - "${PUBLIC_BIND:-127.0.0.1}:${MINIO_PORT:-9000}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
@@ -111,7 +112,8 @@ services:
       S3_ACCESS_KEY: *s3-access-key
       S3_SECRET_KEY: *s3-secret-key
     ports:
-      - "127.0.0.1:${CORE_API_PORT:-8080}:8080"
+      # PUBLIC_BIND=0.0.0.0 (deploy/.env) exposes the API to the LAN for a real phone.
+      - "${PUBLIC_BIND:-127.0.0.1}:${CORE_API_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy

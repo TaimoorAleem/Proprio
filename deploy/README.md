@@ -30,7 +30,7 @@ Both builds use the repository root as context. `core-api` waits for healthy Pos
 
 ## Presigned URLs
 
-core-api reaches MinIO as `http://minio:9000`, but a presigned URL is signed for a host and handed to the client, which is outside the compose network. So `S3_ENDPOINT` (internal, used by core-api to HEAD and by inference to download) differs from `S3_PUBLIC_ENDPOINT` (default `http://localhost:9000`, used only for signing). For a phone on your LAN set it to the PC's address, e.g. `http://192.168.1.20:9000`.
+core-api reaches MinIO as `http://minio:9000`, but a presigned URL is signed for a host and handed to the client, which is outside the compose network. So `S3_ENDPOINT` (internal, used by core-api to HEAD and by inference to download) differs from `S3_PUBLIC_ENDPOINT` (default `http://localhost:9000`, used only for signing). For a phone on your LAN set it to the PC's address, e.g. `http://192.168.1.20:9000`. Ports are bound to `127.0.0.1` by default, so a phone also needs `PUBLIC_BIND=0.0.0.0` (exposes only core-api and MinIO's S3 port) and a firewall rule for 8080 and 9000 on the Private network profile. Use the LAN address (`ipconfig`, Wi-Fi adapter), not your public internet IP.
 
 ## Model
 
