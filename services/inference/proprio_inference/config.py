@@ -6,7 +6,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-DEFAULT_PROFILE_MAP = "SM-R920=galaxy-watch5pro-fit-v1|galaxy-watch-prior-v0"
+DEFAULT_PROFILE_MAP = "SM-R920=galaxy-watch5pro-fit-v1|galaxy-watch-prior-v1"
 DEFAULT_RETRY_DELAYS_MS = (5_000, 15_000, 45_000)
 MAIN_QUEUE = "inference.session-uploaded"
 

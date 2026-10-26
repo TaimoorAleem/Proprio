@@ -36,7 +36,7 @@ core-api reaches MinIO as `http://minio:9000`, but a presigned URL is signed for
 
 By default `model-init` runs `python -m proprio_inference.train_model --out /models/proprio-classifier --synthetic --if-missing` into the `model-data` volume. That model is trained on generated data and its metadata name is `synthetic-fixture`; it classifies nothing real (the golden session is synthetic too, so the E2E asserts structure, not labels). For a real model, train one (needs the MetaMotion data: `dvc pull`, then `python -m proprio_inference.train_model --out E:/models/proprio-classifier` in `services/inference`) and set `MODEL_DIR=E:/models` in `deploy/.env`; that host directory is mounted at `/models`. Recreate with `up -d --force-recreate inference`.
 
-The default `PROFILE_MAP` adds `synthetic-watch=galaxy-watch-prior-v0` so the golden session (device model `synthetic-watch`) is analysable; real watches keep `SM-R920`.
+The default `PROFILE_MAP` adds `synthetic-watch=galaxy-watch-prior-v1` so the golden session (device model `synthetic-watch`) is analysable; real watches keep `SM-R920`.
 
 ## Keys and secrets
 

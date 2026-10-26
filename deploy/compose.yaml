@@ -138,7 +138,7 @@ services:
       MODEL_URI: /models/proprio-classifier
       # The golden session was recorded by a "synthetic-watch"; map it to the prior profile so the
       # E2E suite can analyse it. Real watches (SM-R920) keep the production mapping.
-      PROFILE_MAP: ${PROFILE_MAP:-SM-R920=galaxy-watch5pro-fit-v1|galaxy-watch-prior-v0,synthetic-watch=galaxy-watch-prior-v0}
+      PROFILE_MAP: ${PROFILE_MAP:-SM-R920=galaxy-watch5pro-fit-v1|galaxy-watch-prior-v1,synthetic-watch=galaxy-watch-prior-v1}
     ports:
       - "127.0.0.1:${INFERENCE_PORT:-8000}:8000"
     volumes:
