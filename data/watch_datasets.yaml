@@ -5,7 +5,8 @@ watch-calib-v1:
   sessions:
     - 9390dce6-8af1-44b7-9306-31994e90e314   # U1, calibration at home
 watch-fit-v1:
-  sessions: []   # U2 session 1: fits R, tunes the rejection threshold
+  sessions:   # U2 session 1: fits R, tunes the rejection threshold
+    - 918aa36e-c8ee-42ec-8598-d4c7746bedcc   # 2026-10-26 gym, 15 sets (bench 4, squat 3, row 3, ohp 3, dead 2); load_kg holds lbs (owner note)
 watch-val-v1:
   sessions: []   # U2 session 2: frozen held-out validation, the verdict
 watch-u3-v1:

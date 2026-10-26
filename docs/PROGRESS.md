@@ -6,7 +6,7 @@
 ## Now
 - **Current phase:** Phase 3: calibration + domain shift (Phases 0–2 complete)
 - **Branch:** work on `feature/*` off `dev`
-- **Next step:** Phase 5 MVP code complete (V1–V4 merged). Owner: on-device check of V4 (phone + PC on the same Wi-Fi; steps in `apps/android/mobile/README.md`), and push `dev` so `services-ci` runs for the first time. Sunday 2026-10-25: U2 session 1 (`docs/U2_CHECKLIST.md`); orchestrator then runs `python -m workout_ml.watch.evaluate --in-sample watch-fit-v1`.
+- **Next step:** U2 session 1 analysed in-sample (`docs/reports/phase3-u2s1-review.md`): M1 set acc 0.73 with R fitted on lifts only; OHP→bench is the main failure. Waiting on owner approval of recommendations A–C (lifts-only fit, relative Kabsch gate, physical left-wrist prior). Then: fix the phone upload retry/state bug; model work on OHP vs bench (decision tree step 2); U2 session 2 = the verdict.
 
 ## Pending owner tasks
 - [ ] Confirm Android package id (default `dev.proprio`; spec uses `dev.proprio.wear` / `dev.proprio.mobile`)
@@ -102,6 +102,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-10-26: U2 session 1 recorded (73 min, 15 sets, 0 gaps), pulled over adb (app upload stuck), DVC-tracked as `watch-fit-v1`, in-sample evaluation + orchestrator review (D-030). Folder renamed to `E:\Projects\Proprio`; compose gained opt-in `PUBLIC_BIND`; phone reaches the stack over Tailscale.
 - 2026-10-25: V4 phone ↔ backend reviewed and merged (D-029). Phase 5 MVP code complete; on-device verification pending.
 - 2026-10-25: V3 compose + E2E + services CI reviewed and merged (D-028). V4 next.
 - 2026-10-23: V2 inference-svc reviewed and merged (D-027). V3 started.
