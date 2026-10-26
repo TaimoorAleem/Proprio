@@ -68,8 +68,9 @@ def test_dataset_map_and_empty_dataset(tmp_path):
     ds = load_dataset_map()
     assert set(ds) >= {"watch-calib-v1", "watch-fit-v1", "watch-val-v1", "watch-u3-v1"}
     assert ds["watch-calib-v1"] == ["9390dce6-8af1-44b7-9306-31994e90e314"]
-    assert dataset_paths("watch-fit-v1") == []
-    empty = load_watch_sessions("watch-fit-v1", PRIOR)
+    # watch-u3-v1 is the dataset that stays empty longest (fit-v1 holds U2 session 1 since D-030)
+    assert dataset_paths("watch-u3-v1") == []
+    empty = load_watch_sessions("watch-u3-v1", PRIOR)
     assert empty.empty and "label" in empty.columns
     with pytest.raises(KeyError):
         dataset_paths("nope")
