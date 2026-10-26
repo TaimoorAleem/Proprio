@@ -43,16 +43,25 @@ import dev.proprio.mobile.data.ParticipantId
 import kotlin.math.roundToInt
 
 /** One-line upload/analysis status for a recording. */
-fun uploadStatusText(upload: UploadState?, signedIn: Boolean): String = when {
+fun uploadStatusText(upload: UploadState?, signedIn: Boolean, nowMs: Long = System.currentTimeMillis()): String = when {
     upload == null || (upload.phase == UploadPhase.PENDING && upload.error == null) ->
         if (signedIn) "Not uploaded yet" else "Not signed in"
     else -> when (upload.phase) {
         UploadPhase.PENDING -> "Upload pending: ${upload.error}"
         UploadPhase.UPLOADING -> "Uploading..."
+        UploadPhase.WAITING_TO_RETRY -> "Waiting for server: ${upload.error ?: "not reachable"}" +
+            (upload.nextAttemptAtMs?.let { " Next try ${nextTryText(it - nowMs)}." } ?: " Retrying automatically.")
         UploadPhase.UPLOADED -> "Uploaded, analysis in progress"
         UploadPhase.ANALYZED -> "Analyzed"
         UploadPhase.FAILED -> if (upload.analysisFailed) "Analysis failed: ${upload.error}" else "Upload failed: ${upload.error}"
     }
+}
+
+/** "in 3 min" / "any moment now" for the estimated time of the next automatic attempt. */
+fun nextTryText(remainingMs: Long): String = when {
+    remainingMs <= 60_000 -> "any moment now"
+    remainingMs < 60 * 60_000 -> "in about ${(remainingMs + 59_999) / 60_000} min"
+    else -> "in about ${(remainingMs + 3_599_999) / 3_600_000} h"
 }
 
 /** Short label for the recordings list. */
@@ -60,6 +69,7 @@ fun uploadChip(upload: UploadState?): String? = when (upload?.phase) {
     null -> null
     UploadPhase.PENDING -> "upload pending"
     UploadPhase.UPLOADING -> "uploading"
+    UploadPhase.WAITING_TO_RETRY -> "waiting for server"
     UploadPhase.UPLOADED -> "uploaded"
     UploadPhase.ANALYZED -> "analyzed"
     UploadPhase.FAILED -> if (upload.analysisFailed) "analysis failed" else "upload failed"
@@ -95,9 +105,11 @@ fun BackendPanel(
                     if (!uploaded) {
                         Button(
                             onClick = onUpload,
-                            enabled = state.upload?.phase != UploadPhase.UPLOADING,
                             modifier = Modifier.testTag("upload_now"),
-                        ) { Text(if (state.upload?.phase == UploadPhase.FAILED) "Retry upload" else "Upload now") }
+                        ) {
+                            val phase = state.upload?.phase
+                            Text(if (phase == UploadPhase.FAILED || phase == UploadPhase.WAITING_TO_RETRY) "Retry upload" else "Upload now")
+                        }
                     } else {
                         OutlinedButton(onClick = onRefresh, enabled = !state.refreshing, modifier = Modifier.testTag("backend_refresh")) {
                             Text(if (state.refreshing) "Refreshing..." else "Refresh")

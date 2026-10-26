@@ -8,14 +8,15 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import dev.proprio.backend.SessionFiles
 import dev.proprio.backend.UploadCore
 import dev.proprio.backend.UploadOutcome
-import dev.proprio.backend.UploadPhase
-import dev.proprio.backend.UploadStateStore
+import dev.proprio.backend.UploadBackoff
+import dev.proprio.backend.UploadQueue
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -30,37 +31,37 @@ class StoreSessionFiles(private val store: SessionStore) : SessionFiles {
 /** What the worker calls; separated from [UploadCore] so the worker is testable without a network. */
 interface UploadRunner {
     suspend fun upload(sessionId: String): UploadOutcome
-
-    /** WorkManager stopped retrying: surface the last error as a failed upload the user can retry by hand. */
-    fun giveUp(sessionId: String, reason: String)
 }
 
-class CoreUploadRunner(private val core: UploadCore, private val states: UploadStateStore) : UploadRunner {
+class CoreUploadRunner(private val core: UploadCore) : UploadRunner {
     override suspend fun upload(sessionId: String) = core.upload(sessionId)
-
-    override fun giveUp(sessionId: String, reason: String) {
-        states.update(sessionId) { if (it.remoteUploaded) it else it.copy(phase = UploadPhase.FAILED, error = reason) }
-    }
 }
 
 /** Queues upload work for a session; the real one is backed by WorkManager. */
-fun interface UploadScheduler {
-    fun enqueue(sessionId: String)
-}
+typealias UploadScheduler = UploadQueue
 
 /**
- * Persistent, network-constrained, exponentially backed-off upload job per session. New requests are appended to
- * any job still running for the same session, so labels edited mid-upload are picked up by a follow-up run, and a
- * job that already failed is replaced (manual retry). A run with nothing left to send makes no network call.
+ * Persistent, network-constrained, exponentially backed-off upload job per session. Transient failures retry forever
+ * (WorkManager caps the wait at 5 hours); app start, sign-in and "Upload now" call [enqueue] again, which restarts a
+ * job that is merely waiting in backoff. While a worker is actually running, a new request is appended so labels
+ * edited mid-upload are picked up by a follow-up run, and the running upload is never cancelled. A run with nothing
+ * left to send makes no network call.
  */
 class WorkUploadScheduler(private val workManager: WorkManager) : UploadScheduler {
+    private fun name(sessionId: String) = "upload-$sessionId"
+
+    override fun isRunning(sessionId: String): Boolean =
+        workManager.getWorkInfosForUniqueWork(name(sessionId)).get().any { it.state == WorkInfo.State.RUNNING }
+
     override fun enqueue(sessionId: String) {
         val request = OneTimeWorkRequestBuilder<UploadWorker>()
             .setInputData(Data.Builder().putString(UploadWorker.KEY_SESSION_ID, sessionId).build())
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, UploadBackoff.INITIAL_MS, TimeUnit.MILLISECONDS)
             .build()
-        workManager.enqueueUniqueWork("upload-$sessionId", ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+        // REPLACE cancels a job waiting in backoff (or blocked behind one) so it runs now; never replace a running one.
+        val policy = if (isRunning(sessionId)) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.REPLACE
+        workManager.enqueueUniqueWork(name(sessionId), policy, request)
     }
 }
 
@@ -73,12 +74,9 @@ class UploadWorker(
         val id = inputData.getString(KEY_SESSION_ID) ?: return Result.failure()
         return when (val outcome = runner.upload(id)) {
             UploadOutcome.Done -> Result.success()
-            is UploadOutcome.Retry -> if (runAttemptCount + 1 >= MAX_ATTEMPTS) {
-                runner.giveUp(id, outcome.reason)
-                Result.failure()
-            } else {
-                Result.retry()
-            }
+            // Transient (offline, server down or restarting, 5xx): keep going with backoff, no attempt cap. The core
+            // has already stored the error and the next attempt time.
+            is UploadOutcome.Retry -> Result.retry()
             // Nothing a retry can fix; the state already carries the reason. Signing in re-queues pending sessions.
             is UploadOutcome.Failed, UploadOutcome.AuthRequired -> Result.failure()
         }
@@ -86,7 +84,6 @@ class UploadWorker(
 
     companion object {
         const val KEY_SESSION_ID = "session_id"
-        const val MAX_ATTEMPTS = 6
     }
 }
 

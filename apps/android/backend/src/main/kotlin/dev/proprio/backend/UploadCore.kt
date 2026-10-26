@@ -18,7 +18,9 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.zip.ZipFile
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -67,6 +69,10 @@ class UploadCore(
         }
         val outcome = try {
             run(c, sessionId)
+        } catch (e: CancellationException) {
+            // WorkManager stopped the worker (constraints lost, timeout, replaced): never leave "uploading" behind.
+            withContext(NonCancellable) { record(sessionId, UploadOutcome.Retry("Interrupted, will retry.")) }
+            throw e
         } catch (e: java.util.zip.ZipException) {
             UploadOutcome.Failed("The recording file is damaged.")
         } catch (e: IOException) {
@@ -75,6 +81,9 @@ class UploadCore(
             UploadOutcome.Failed("The recording metadata is unreadable.")
         } catch (e: IllegalArgumentException) {
             UploadOutcome.Failed(e.message ?: "Invalid recording.")
+        } catch (e: RuntimeException) {
+            // Unknown bug: stop with a visible reason (manual retry stays available) instead of a stuck "uploading".
+            UploadOutcome.Failed("Unexpected error: ${e.message ?: e.javaClass.simpleName}")
         }
         record(sessionId, outcome)
         return outcome
@@ -159,7 +168,7 @@ class UploadCore(
             builder.header(k, v)
         }
         val code = try {
-            withContext(Dispatchers.IO) { c.http.newCall(builder.build()).execute().use { it.code } }
+            executeCancellable(c.http.newCall(builder.build()))
         } catch (e: IOException) {
             return UploadOutcome.Retry(e.message ?: "Upload interrupted")
         }
@@ -169,6 +178,21 @@ class UploadCore(
             code == 400 || code == 403 || code == 408 || code == 429 || code >= 500 -> UploadOutcome.Retry("Storage answered HTTP $code")
             else -> UploadOutcome.Failed("Storage answered HTTP $code")
         }
+    }
+
+    /** Runs the call so that cancelling the coroutine aborts the request instead of waiting for a timeout. */
+    private suspend fun executeCancellable(call: okhttp3.Call): Int = suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                if (cont.isActive) cont.resumeWith(Result.failure(e))
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                val code = response.use { it.code }
+                if (cont.isActive) cont.resumeWith(Result.success(code))
+            }
+        })
     }
 
     private suspend fun syncLabels(c: BackendClient, id: String): UploadOutcome {
@@ -217,18 +241,22 @@ class UploadCore(
     private fun record(id: String, outcome: UploadOutcome) {
         states.update(id) {
             when (outcome) {
-                UploadOutcome.Done -> it // markRemote already set the phase
-                is UploadOutcome.Retry -> it.copy(
-                    phase = if (it.remoteUploaded) it.phase else UploadPhase.PENDING,
-                    attempts = it.attempts + 1, error = outcome.reason, updatedAtMs = nowMs(),
-                )
+                UploadOutcome.Done -> it.copy(nextAttemptAtMs = null) // markRemote already set the phase
+                is UploadOutcome.Retry -> {
+                    val attempts = it.attempts + 1
+                    it.copy(
+                        phase = if (it.remoteUploaded) it.phase else UploadPhase.WAITING_TO_RETRY,
+                        attempts = attempts, error = outcome.reason, updatedAtMs = nowMs(),
+                        nextAttemptAtMs = nowMs() + UploadBackoff.delayMs(attempts),
+                    )
+                }
                 is UploadOutcome.Failed -> it.copy(
                     phase = if (it.remoteUploaded) it.phase else UploadPhase.FAILED,
-                    attempts = it.attempts + 1, error = outcome.reason, updatedAtMs = nowMs(),
+                    attempts = it.attempts + 1, error = outcome.reason, updatedAtMs = nowMs(), nextAttemptAtMs = null,
                 )
                 UploadOutcome.AuthRequired -> it.copy(
                     phase = if (it.remoteUploaded) it.phase else UploadPhase.PENDING,
-                    error = "Sign in to upload.", updatedAtMs = nowMs(),
+                    error = "Sign in to upload.", updatedAtMs = nowMs(), nextAttemptAtMs = null,
                 )
             }
         }

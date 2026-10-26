@@ -97,7 +97,15 @@ class BackendUiTest {
 
         state = state.copy(upload = UploadState(UploadPhase.UPLOADING))
         compose.onNodeWithTag("backend_status").assertTextEquals("Uploading...")
-        compose.onNodeWithTag("upload_now").assertIsNotEnabled()
+        compose.onNodeWithTag("upload_now").assertIsEnabled() // also reachable from a stuck "uploading"
+
+        val now = System.currentTimeMillis()
+        state = state.copy(
+            upload = UploadState(UploadPhase.WAITING_TO_RETRY, error = "Connection refused", nextAttemptAtMs = now + 5 * 60_000),
+        )
+        compose.onNodeWithTag("backend_status").assertTextContains("Waiting for server: Connection refused", substring = true)
+        compose.onNodeWithTag("backend_status").assertTextContains("Next try in about", substring = true)
+        compose.onNodeWithText("Retry upload").assertExists()
 
         state = state.copy(upload = UploadState(UploadPhase.PENDING, error = "Storage answered HTTP 503"))
         compose.onNodeWithTag("backend_status").assertTextContains("Upload pending", substring = true)
