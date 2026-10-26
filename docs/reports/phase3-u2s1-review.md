@@ -19,7 +19,7 @@
 Per class (M1, lifts-only R, window recall): bench 1.00, squat 0.99, deadlift 0.92, row 0.63, **OHP 0.18** (all 3 OHP sets voted bench).
 
 ## What the data says
-1. **The prior profile was wrong by ~176°.** The fitted R is a clean ~90° turn about the screen normal: the watch's **+x (3 o'clock, buttons) points down the forearm**, where the MetaMotion's +y does. That is exactly how a watch sits on a left wrist with the buttons toward the hand. The prior assumed +y (12 o'clock). Left wrist is confirmed (det +1, the unconstrained fit is also a proper rotation); the report's "left-wrist suspect" warning is a false alarm caused by item 2.
+1. **The prior profile was wrong by ~176°, but only in roll.** The fitted R is a clean ~90° turn about the screen normal: the watch's **+x (3 o'clock, buttons) points down the forearm**, where the MetaMotion's +y does, as on a left wrist with the buttons toward the hand (owner-confirmed). The prior had that distal axis right; it guessed the signs of the two axes MetaMotion never pinned down (x and z) wrong, which is a 180° roll about the forearm. *(Corrected 2026-10-26: an earlier version said the prior assumed +y distal.)* Left wrist is confirmed (det +1, the unconstrained fit is also a proper rotation); the report's "left-wrist suspect" warning is a false alarm caused by item 2.
 2. **Rest doesn't belong in the rotation fit (spec flaw, mine).** MetaMotion has rest from only 2 of 5 people and it's a narrow posture; the watch's rest gaps are walking and re-racking (|mean a| 0.55–1.0 g, i.e. not static). With 17 rest segments outweighing 15 lifts, rest dragged the fit to a 0.34 g residual. Lifts only: 0.148 g.
 3. **The 0.15 g calibration gate sits at the noise floor.** MetaMotion's own participants differ from their pooled per-exercise gravity by **0.158 g RMS** (squat up to 0.48 g for one person). A single watch wearer can't be expected to match the pooled mean more closely than the training participants match each other.
 4. **What transfers and what doesn't.** Squat, bench and deadlift transfer almost perfectly once R is right. OHP → bench is the failure: in MetaMotion both have nearly the same gravity vector (forearm vertical), so the models separate them by motion, and that cue doesn't survive the device change. Row is partial. Roll about the forearm is poorly determined because every lift's gravity lies near ±y (smallest singular value 0.033), so a residual roll error is likely part of it.
@@ -29,9 +29,16 @@ Per class (M1, lifts-only R, window recall): bench 1.00, squat 0.99, deadlift 0.
 ## Recommendations (gate/spec changes need the owner's approval)
 - **A. Fit R on lifts only** (exclude rest and other). Evaluation-method fix, motivated by session 1 and to be judged on session 2. → D-030.
 - **B. Make the Kabsch gate relative:** pass if the residual is ≤ 1.5 × MetaMotion's between-participant RMS (≈ 0.24 g), keep det = +1 and the gyro check. Absolute 0.15 g is unreachable in principle for some people. *(PROJECT.md §6.5 change: owner decision.)*
-- **C. Replace the prior with the physical left-wrist rotation** (90° about z, +x distal), so a new watch works before any fit.
+- **C. Replace the prior with the left-wrist rotation** (90° about z, +x distal, screen normal = MetaMotion +z), the axis-aligned rounding of the session-1 fit, so a new watch works before any fit.
 - **D. Next model work (decision tree step 2):** OHP vs bench and row. Candidates: wider roll augmentation about the forearm axis, and orientation-robust features (gravity-projected vertical acceleration). Must pass at zero rotation on MetaMotion LOPO. Step 3 (mixing watch data) needs ≥ 30 watch sets; we have 15.
 - **E. Session 2 runs the full checklist** (20 sets, squat-first order is fine either way), loads in kg or a note, and ends each set promptly.
+
+## Rep labels (owner asked whether every logged count is right)
+Counted from the raw 50 Hz signal (band-passed first principal component of acceleration, peaks marked; plot kept outside git). The counter can't separate reps from unrack/re-rack and walk-out, so this flags sets for a human look rather than correcting labels:
+- **Consistent with the log:** bench 55 (12), bench 95 (8), bench 115 (2, slow grinding cycles), squat 65 (8), squat 75 (6), row 60 (10), row 80 (8).
+- **Possibly miscounted:** bench 75 (logged 12, 13 regular cycles), squat 55 (logged 8, about 10 large cycles), row 50 (logged 10, owner unsure 10 or 12; 10–11 cycles).
+- **Can't tell from this signal:** OHP 30, 40, 50 and deadlift 95 (no clean periodic pattern on this axis).
+- **Segment boundaries wrong:** deadlift 75 (segment 26) is 9.3 s with one movement in it; its 6 reps happened outside the marked set. It should be re-marked or excluded from rep evaluation.
 
 ## Side finding: the upload never left the phone
 The phone kept the session in `UPLOADING` (4 attempts, no session row on the server). `UploadCore` sets `UPLOADING` before calling the server and leaves it there on a retryable error, without recording the error, so the UI shows "uploading" during backoff and the cause is invisible. Fix: show `WAITING_TO_RETRY` with the last error, and don't cap retries at 6 (a gym session should wait for the PC indefinitely).
