@@ -6,7 +6,7 @@
 ## Now
 - **Current phase:** Phase 3: calibration + domain shift (Phases 0–2 complete)
 - **Branch:** work on `feature/*` off `dev`
-- **Next step:** Owner approved A–C (D-031); implementation and the phone upload fix are running. Owner to check flagged rep counts in session 1 (review §Rep labels). Then model work on OHP vs bench (decision tree step 2); U2 session 2 = the verdict.
+- **Next step:** A–C implemented (D-031; report `docs/reports/phase3-u2s1-insample-v2.md`): calibration gate passes in-sample (0.148 g vs 0.237 g), prior v1 ≈ fitted (M1 0.73 both). Upload retry fix merged and on the phone. Owner: check flagged rep counts (review §Rep labels). Orchestrator next: OHP vs bench (decision tree step 2: roll augmentation about the forearm axis, orientation-robust features), expedited upload work, `devices` insert race in core-api. U2 session 2 = the verdict.
 
 ## Pending owner tasks
 - [ ] Confirm Android package id (default `dev.proprio`; spec uses `dev.proprio.wear` / `dev.proprio.mobile`)
@@ -102,6 +102,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-10-26: Owner approved A–C; implemented and re-run in-sample (prior v1 now matches the fit, OHP→bench remains). Phone upload: `WAITING_TO_RETRY` state with the error, no retry cap, stale-state recovery, REPLACE instead of chaining behind backoff; Doze found holding jobs while the screen is off.
 - 2026-10-26: U2 session 1 recorded (73 min, 15 sets, 0 gaps), pulled over adb (app upload stuck), DVC-tracked as `watch-fit-v1`, in-sample evaluation + orchestrator review (D-030). Folder renamed to `E:\Projects\Proprio`; compose gained opt-in `PUBLIC_BIND`; phone reaches the stack over Tailscale.
 - 2026-10-25: V4 phone ↔ backend reviewed and merged (D-029). Phase 5 MVP code complete; on-device verification pending.
 - 2026-10-25: V3 compose + E2E + services CI reviewed and merged (D-028). V4 next.
