@@ -117,3 +117,9 @@ The owner added `docs/INTERVIEW_NOTES.md` to `.gitignore`. Ignoring doesn't untr
 - **Upload idempotency.** create → PUT untouched zip → complete → labels; 409s resolve by reading server state; completion persisted per session so a finished session is never resent; labels only when their hash changes, with ETag/If-Match. WorkManager: network constraint, exponential backoff, 6 attempts, unique work per session.
 - **OkHttp pinned at 5.1.0** because 5.5.1 needs compileSdk 37, which CI doesn't install.
 - **Debug builds allow cleartext to any host** (network-security domain rules can't express LAN ranges); release builds reject `http://`.
+
+**D-030 · 2026-10-26 · U2 session 1 is `watch-fit-v1`; first look says the rotation fit must exclude rest (proposal)**
+- Session `918aa36e` (73 min, 15 sets) is the fit set. The phone's upload stalled, so it was pulled over adb and packaged exactly as the phone's export does (watch files byte-identical + `labels.json`). `load_kg` holds pounds per the owner's note; loads aren't model inputs.
+- In-sample, as specified: Kabsch residual 0.337 g (fail), M1 set accuracy 0.60. Cause: 17 non-static rest gaps outweighed 15 lifts in the fit; MetaMotion rest comes from 2 of 5 people in one posture. Fitted on lifts only: residual 0.148 g, M1 0.73, and R is a clean ~90° turn about the screen normal (+x, the button side, points down the forearm on a left wrist), ~176° from the prior.
+- MetaMotion's own between-participant spread of per-exercise gravity is 0.158 g RMS, so the absolute 0.15 g gate sits at the noise floor.
+- **Proposed, pending owner approval:** (A) fit R on lifts only; (B) relative Kabsch gate ≤ 1.5× MetaMotion between-participant RMS; (C) replace the prior with the physical left-wrist rotation. These changes were motivated by session 1, so session 2 (`watch-val-v1`, frozen) is the only fair judge of them.

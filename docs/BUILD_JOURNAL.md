@@ -331,6 +331,15 @@ I misread one rotation step and did mostly the wrong axis. Instead of re-recordi
 - **First full loop:** against the local stack, the client's own upload code took the golden recording from registration to ANALYZED. With a synthetic model the predictions are meaningless; the point was the plumbing.
 - **Still to do by hand:** the same flow on the real phone over Wi-Fi.
 
+## Part 10 — The first real gym session (2026-10-26)
+- **The recording was flawless:** 73 minutes, 15 sets, 49.88 Hz, zero gaps, 0.03 ms of clock drift. The Freecess work from Part 6 paid off.
+- **The upload wasn't:** the phone sat on "uploading" because the PC was off during the workout and the app hid the retry state. I pulled the file over adb and packaged it byte-for-byte the way the phone's export does.
+- **First look, honestly labeled optimistic:** with the default watch profile, 27% of sets were right. Fitting the watch-to-training rotation took it to 60%, and the fit itself failed its quality gate.
+- **Debugging the fit instead of the model:** the "rest" periods between sets were walking and re-racking, not the still posture the training data calls rest, and there were more of them than lifts. Fitting on lifts only dropped the residual from 0.34 g to 0.15 g and set accuracy rose to 73%.
+- **The physics checked out:** the fitted rotation is a clean 90° turn. On a left wrist the watch's button side points toward the hand, so its x axis runs down the forearm, where the old sensor's y axis did. My initial guess had assumed y.
+- **Questioning my own gate:** the training participants differ from each other by 0.16 g in the same measurement, so a 0.15 g gate for a new person was never fair. Proposed a relative gate instead, and flagged that every change motivated by session 1 can only be judged on session 2.
+- **What's left:** squat, bench and deadlift transfer; overhead press is read as bench (both hold the forearm vertical, so only the motion separates them) and rows are partial. That's the next model problem.
+
 ## Housekeeping worth telling
 - **Renamed the GitHub repo to Proprio** and rewrote the README around the product.
 - **Made the interview notes private.** That meant learning the hard way that `.gitignore` doesn't untrack a committed file.
