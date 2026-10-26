@@ -33,7 +33,7 @@ def test_golden_gym_end_to_end(broker, storage, golden_gym_bytes):
     assert ev["status"] == "ok"
     assert ev["caused_by"] == doc["event_id"] and ev["session_id"] == doc["session_id"]
     assert ev["model"] == {"name": "fixture-classifier", "version": "fixture-1"}
-    prior = load_profile("galaxy-watch-prior-v0")  # the fitted profile is not bundled yet
+    prior = load_profile("galaxy-watch-prior-v1")  # the fitted profile is not bundled yet
     assert ev["profile_id"] == prior.profile_id and ev["transform_id"] == prior.transform_id
     assert 11000 < ev["recording_stats"]["acc"]["n"] <= EXPECTED["gym"]["rows"]["acc"]
     ids = [s["segment_id"] for s in ev["segments"]]

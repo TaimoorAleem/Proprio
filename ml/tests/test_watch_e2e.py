@@ -29,7 +29,11 @@ def synth(tmp_path_factory):
         f"watch-fit-v1: {{sessions: [{GYM_ID}]}}\n"
         "watch-val-v1: {sessions: []}\n"
     )
-    return {"tmp": tmp, "R": R, "ds": ds, "mm": mm_cleaned(rng, sets_per_label=3, duration_s=18.0)}
+    mm = mm_cleaned(rng, sets_per_label=3, duration_s=18.0)
+    # realistic between-participant spread of the per-exercise gravity (relative Kabsch gate)
+    mm.loc[mm["participant"] == "A", "acc_x"] += 0.05
+    mm.loc[mm["participant"] == "B", "acc_x"] -= 0.05
+    return {"tmp": tmp, "R": R, "ds": ds, "mm": mm}
 
 
 def test_in_sample_end_to_end(synth, tmp_path):

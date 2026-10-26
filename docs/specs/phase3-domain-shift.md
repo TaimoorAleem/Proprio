@@ -47,12 +47,12 @@ The harness must work **Sunday evening on U2 session 1 alone**, in a clearly fla
 - **For each exercise e present in both:**
   - `m_e` = mean gravity vector in g in the MetaMotion frame, the mean over all MetaMotion windows of that exercise. Recompute it; don't use the rounded PROJECT table.
   - `w_e` = the same on the watch side, in the watch frame.
-  - Include `rest` if present on both sides.
-  - Weight each exercise by the number of watch sets (rest: number of rest segments).
+  - **Lifts only (amended):** `rest` and `other` are excluded on both sides; only `set`-kind watch segments and the five lift labels on the MetaMotion side are used (rest gravity depends on arm posture, not on the sensor frame).
+  - Weight each exercise by the number of watch lift sets.
 - **Fit** by weighted Kabsch, constrained to det = +1: R* = argmin Σ wₑ ‖R wₑ − mₑ‖².
 - **Report:**
   - the residual: weighted RMS of ‖R* wₑ − mₑ‖ in g, plus per exercise;
-  - the angle between R* and the prior R (from `galaxy-watch-prior-v0`);
+  - the angle between R* and the prior R (from `galaxy-watch-prior-v1`; v0 is kept for reproducibility);
   - the unconstrained (orthogonal, det free) fit. **Flag** if it prefers det = −1, since that contradicts the left-wrist assumption (D-006) and must be escalated to the owner;
   - **conditioning:** the smallest singular value of the weighted cross-covariance. Warn if the exercise gravity directions are near-collinear, because R is then poorly determined about that axis.
 - **Gyro confirmation:** per exercise, compute per-axis gyro variance on the watch side after applying R*, and on the MetaMotion side. Report the Pearson r of the 3×E variance profile. The gate is r ≥ 0.8 (PROJECT §6.4).
@@ -86,7 +86,7 @@ The harness must work **Sunday evening on U2 session 1 alone**, in a clearly fla
 
 | gate | rule |
 |---|---|
-| Calibration | from `calibration_check` on `watch-calib-v1`, plus the Kabsch residual < 0.15 g from §3.2 |
+| Calibration | from `calibration_check` on `watch-calib-v1`, plus the Kabsch residual <= 1.5 x MetaMotion's between-participant spread of per-exercise gravity (RMS over participant x lift pairs of the distance from the participant's mean gravity vector to the pooled one; about 0.158 g, so about 0.24 g), computed from the training data at run time (§3.2, amended) |
 | Set accuracy | ≥ 0.90, **and** ≤ 5 pp below the MetaMotion LOPO baseline for the same model (M1: 0.986 from `current-baseline.md`; read it from the latest MLflow pipeline run, or pass it explicitly) |
 | Window macro-F1 | ≥ 0.85, and every class recall ≥ 0.75 (classes with ≥ 2 sets only; others listed as "insufficient data") |
 | Rejection | ≥ 0.80 |

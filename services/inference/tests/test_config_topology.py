@@ -22,7 +22,7 @@ def test_parse_profile_map():
 def test_settings_from_env_defaults_and_overrides():
     s = Settings.from_env({})
     assert s.tau == 0.6 and s.queue == "inference.session-uploaded" and s.max_retries == 3
-    assert s.profile_map["SM-R920"] == ("galaxy-watch5pro-fit-v1", "galaxy-watch-prior-v0")
+    assert s.profile_map["SM-R920"] == ("galaxy-watch5pro-fit-v1", "galaxy-watch-prior-v1")
     s = Settings.from_env(
         {
             "TAU": "0.7",
@@ -40,17 +40,17 @@ def test_settings_from_env_defaults_and_overrides():
 
 def test_sm_r920_falls_back_to_prior_when_fitted_profile_is_absent(model):
     a = Analyzer(model, Settings.from_env({}))
-    assert a.profile_for("SM-R920").profile_id == "galaxy-watch-prior-v0"  # until the fit lands
+    assert a.profile_for("SM-R920").profile_id == "galaxy-watch-prior-v1"  # until the fit lands
 
 
 def test_sm_r920_prefers_the_fitted_profile_when_present(model, tmp_path):
-    src = profiles_mod.PROFILES_DIR / "galaxy-watch-prior-v0.yaml"
+    src = profiles_mod.PROFILES_DIR / "galaxy-watch-prior-v1.yaml"
     fitted = tmp_path / "fit.yaml"
     fitted.write_text(
-        src.read_text(encoding="utf-8").replace("galaxy-watch-prior-v0", "galaxy-watch5pro-fit-v1"),
+        src.read_text(encoding="utf-8").replace("galaxy-watch-prior-v1", "galaxy-watch5pro-fit-v1"),
         encoding="utf-8",
     )
-    s = Settings(profile_map={"SM-R920": (str(fitted), "galaxy-watch-prior-v0")})
+    s = Settings(profile_map={"SM-R920": (str(fitted), "galaxy-watch-prior-v1")})
     assert Analyzer(model, s).profile_for("SM-R920").profile_id == "galaxy-watch5pro-fit-v1"
 
 
