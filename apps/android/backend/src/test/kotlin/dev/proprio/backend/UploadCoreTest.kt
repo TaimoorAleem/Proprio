@@ -2,6 +2,8 @@ package dev.proprio.backend
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -33,6 +35,7 @@ class UploadCoreTest {
         var getSession: MockResponse = jsonResponse(200, sessionJson("UPLOADED"))
         var getLabels: MockResponse = status(404)
         var putLabels: () -> MockResponse = { jsonResponse(200, labels, "ETag" to "\"1\"") }
+        var refresh: MockResponse = jsonResponse(200, tokenJson("acc2", "ref2"))
         lateinit var s: ScriptedServer
 
         fun ticket(r: RecordedRequest) = jsonResponse(
@@ -42,6 +45,7 @@ class UploadCoreTest {
         )
 
         fun handle(r: RecordedRequest): MockResponse = when (r.line()) {
+            "POST /v1/auth/refresh" -> refresh
             "POST /v1/sessions" -> create(r)
             "PUT /bucket/raw.zip" -> put()
             "POST /v1/sessions/$GOLDEN_ID/complete" -> complete
@@ -172,7 +176,7 @@ class UploadCoreTest {
 
         assertTrue(first is UploadOutcome.Retry)
         assertEquals(0, s.count("PUT /bucket/raw.zip"))
-        assertEquals(UploadPhase.PENDING, states.get(GOLDEN_ID)!!.phase)
+        assertEquals(UploadPhase.WAITING_TO_RETRY, states.get(GOLDEN_ID)!!.phase)
         assertEquals(1, states.get(GOLDEN_ID)!!.attempts)
 
         fake.create = { r -> fake.ticket(r) }
@@ -229,6 +233,140 @@ class UploadCoreTest {
         assertTrue(st.remoteUploaded)
         assertTrue(st.labelsError != null)
         assertNull(st.labelsHash)
+    }
+
+    @Test
+    fun retry_showsWaitingToRetry_withTheLastError_andTheNextAttemptTime() = withCore { fake, _, _, states ->
+        val now = 1_000_000L
+        fake.create = { status(503) }
+        val timed = timedCore(fake, states) { now }
+
+        val o = timed.upload(GOLDEN_ID)
+
+        assertTrue(o is UploadOutcome.Retry)
+        val st = states.get(GOLDEN_ID)!!
+        assertEquals(UploadPhase.WAITING_TO_RETRY, st.phase)
+        assertEquals("HTTP 503", st.error)
+        assertEquals(1, st.attempts)
+        assertEquals(now + UploadBackoff.delayMs(1), st.nextAttemptAtMs)
+    }
+
+    @Test
+    fun uploadingIsOnlyShownWhileARequestIsInFlight() = withCore { fake, _, core, states ->
+        var phaseDuringRequest: UploadPhase? = null
+        fake.put = {
+            phaseDuringRequest = states.get(GOLDEN_ID)!!.phase
+            status(503)
+        }
+
+        core.upload(GOLDEN_ID)
+
+        assertEquals(UploadPhase.UPLOADING, phaseDuringRequest)
+        assertEquals(UploadPhase.WAITING_TO_RETRY, states.get(GOLDEN_ID)!!.phase)
+        assertEquals("Storage answered HTTP 503", states.get(GOLDEN_ID)!!.error)
+    }
+
+    @Test
+    fun transientFailures_neverGiveUp_andTheBackoffIsCapped() = withCore { fake, _, core, states ->
+        fake.create = { status(503) }
+
+        repeat(25) { assertTrue(core.upload(GOLDEN_ID) is UploadOutcome.Retry) }
+
+        val st = states.get(GOLDEN_ID)!!
+        assertEquals(UploadPhase.WAITING_TO_RETRY, st.phase)
+        assertEquals(25, st.attempts)
+        assertEquals(UploadBackoff.MAX_MS, UploadBackoff.delayMs(25))
+        assertEquals(UploadBackoff.INITIAL_MS, UploadBackoff.delayMs(1))
+        fake.create = { r -> fake.ticket(r) }
+        assertEquals(UploadOutcome.Done, core.upload(GOLDEN_ID))
+        assertEquals(UploadPhase.UPLOADED, states.get(GOLDEN_ID)!!.phase)
+        assertNull(states.get(GOLDEN_ID)!!.nextAttemptAtMs)
+    }
+
+    @Test
+    fun serverUnreachable_thenBackAtTheSameAddress_uploadsWithoutManualAction() = runBlocking {
+        // The owner's case: PC off while recording, back later. First the port is closed (connection refused).
+        val dead = ScriptedServer { status(500) }
+        val deadUrl = dead.baseUrl
+        dead.close()
+        val fake = Fake()
+        var url = deadUrl
+        ScriptedServer(fake::handle).use { live ->
+            fake.s = live
+            val svc = BackendService(MemorySecretStore(), { url }, allowCleartext = true)
+            svc.auth.signIn("a@b.c", tokens("acc", "ref"))
+            val states = MemoryUploadStateStore()
+            val core = UploadCore({ svc.client() }, states, files)
+
+            repeat(3) { assertTrue(core.upload(GOLDEN_ID) is UploadOutcome.Retry) }
+            assertEquals(UploadPhase.WAITING_TO_RETRY, states.get(GOLDEN_ID)!!.phase)
+            assertEquals(3, states.get(GOLDEN_ID)!!.attempts)
+
+            url = live.baseUrl
+            assertEquals(UploadOutcome.Done, core.upload(GOLDEN_ID))
+            assertEquals(UploadPhase.UPLOADED, states.get(GOLDEN_ID)!!.phase)
+        }
+    }
+
+    @Test
+    fun staleAccessToken_afterServerRestartWithNewKey_isRefreshedAndTheUploadCompletes() = withCore { fake, s, core, states ->
+        // core-api restarted with a new ephemeral JWT key: the old access token is now rejected.
+        fake.create = { r -> if (r.headers["Authorization"] == "Bearer acc") status(401) else fake.ticket(r) }
+
+        assertEquals(UploadOutcome.Done, core.upload(GOLDEN_ID))
+
+        assertEquals(1, s.count("POST /v1/auth/refresh"))
+        assertEquals(UploadPhase.UPLOADED, states.get(GOLDEN_ID)!!.phase)
+    }
+
+    @Test
+    fun refreshEndpointDown_isTransient_notAuthRequired() = withCore { fake, _, core, states ->
+        fake.create = { status(401) }
+        fake.refresh = status(503)
+
+        val o = core.upload(GOLDEN_ID)
+
+        assertTrue(o is UploadOutcome.Retry, o.toString())
+        assertEquals(UploadPhase.WAITING_TO_RETRY, states.get(GOLDEN_ID)!!.phase)
+    }
+
+    @Test
+    fun cancelledMidRequest_doesNotLeaveUploadingBehind() = withCore { fake, s, core, states ->
+        // Storage hangs; WorkManager then stops the worker (constraints lost, replaced, 10 min limit).
+        fake.put = { MockResponse.Builder().code(200).headersDelay(30, java.util.concurrent.TimeUnit.SECONDS).build() }
+        val job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { core.upload(GOLDEN_ID) }
+        val deadline = System.currentTimeMillis() + 10_000
+        while (s.count("PUT /bucket/raw.zip") == 0 && System.currentTimeMillis() < deadline) Thread.sleep(10)
+        assertEquals(UploadPhase.UPLOADING, states.get(GOLDEN_ID)!!.phase)
+
+        val t0 = System.currentTimeMillis()
+        job.cancelAndJoin()
+
+        assertTrue(System.currentTimeMillis() - t0 < 5_000, "cancelling must abort the request, not wait for the timeout")
+        val st = states.get(GOLDEN_ID)!!
+        assertEquals(UploadPhase.WAITING_TO_RETRY, st.phase)
+        assertEquals("Interrupted, will retry.", st.error)
+    }
+
+    @Test
+    fun unexpectedException_endsInFailed_notAStuckUploading() = withCore { _, _, _, states ->
+        val broken = object : SessionFiles {
+            override fun zip(sessionId: String): File? = throw IllegalStateException("boom")
+            override fun labelsText(sessionId: String): String? = null
+        }
+        val svc = BackendService(MemorySecretStore(), { "http://localhost:1/" }, allowCleartext = true)
+        svc.auth.signIn("a@b.c", tokens("acc", "ref"))
+
+        val o = UploadCore({ svc.client() }, states, broken).upload(GOLDEN_ID)
+
+        assertTrue(o is UploadOutcome.Failed, o.toString())
+        assertEquals(UploadPhase.FAILED, states.get(GOLDEN_ID)!!.phase)
+    }
+
+    private fun timedCore(fake: Fake, states: UploadStateStore, now: () -> Long): UploadCore {
+        val svc = BackendService(MemorySecretStore(), { fake.s.baseUrl }, allowCleartext = true)
+        svc.auth.signIn("a@b.c", tokens("acc", "ref"))
+        return UploadCore({ svc.client() }, states, files, now)
     }
 
     @Test
