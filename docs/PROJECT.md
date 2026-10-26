@@ -208,7 +208,7 @@ Proprio is a gym logger:
 
 | Gate | Pass |
 |---|---|
-| Calibration | static \|a\| 1.00 ± 0.03 g; rest gyro bias < 1 deg/s; Kabsch residual < 0.15 g |
+| Calibration | static \|a\| 1.00 ± 0.03 g; rest gyro bias < 1 deg/s; Kabsch residual (lifts only) ≤ 1.5 × MetaMotion between-participant gravity spread (≈ 0.24 g; D-031) |
 | Set-level exercise accuracy | ≥ 90% **and** ≤ 5 pp below MetaMotion LOPO |
 | Window macro-F1 | ≥ 0.85; every class recall ≥ 0.75 |
 | Other/rest rejection | ≥ 80% not logged as a lift |

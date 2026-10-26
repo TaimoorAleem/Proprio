@@ -6,7 +6,7 @@
 ## Now
 - **Current phase:** Phase 3: calibration + domain shift (Phases 0–2 complete)
 - **Branch:** work on `feature/*` off `dev`
-- **Next step:** U2 session 1 analysed in-sample (`docs/reports/phase3-u2s1-review.md`): M1 set acc 0.73 with R fitted on lifts only; OHP→bench is the main failure. Waiting on owner approval of recommendations A–C (lifts-only fit, relative Kabsch gate, physical left-wrist prior). Then: fix the phone upload retry/state bug; model work on OHP vs bench (decision tree step 2); U2 session 2 = the verdict.
+- **Next step:** Owner approved A–C (D-031); implementation and the phone upload fix are running. Owner to check flagged rep counts in session 1 (review §Rep labels). Then model work on OHP vs bench (decision tree step 2); U2 session 2 = the verdict.
 
 ## Pending owner tasks
 - [ ] Confirm Android package id (default `dev.proprio`; spec uses `dev.proprio.wear` / `dev.proprio.mobile`)
