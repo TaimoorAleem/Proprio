@@ -119,6 +119,6 @@ def test_no_gym_sessions_yet_exits_cleanly(synth, tmp_path, capsys):
 
 def test_calibrate_cli_with_empty_fit_dataset(tmp_path, capsys):
     out = tmp_path / "fit.json"
-    assert calibrate.main(["--fit", "watch-fit-v1", "--out", str(out)]) == 0
+    assert calibrate.main(["--fit", "watch-u3-v1", "--out", str(out)]) == 0
     assert "no gym sessions yet" in capsys.readouterr().out
     assert json.loads(Path(out).read_text())["status"] == "no gym sessions yet"
