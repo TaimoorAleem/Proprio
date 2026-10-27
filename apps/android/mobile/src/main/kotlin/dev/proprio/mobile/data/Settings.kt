@@ -1,5 +1,6 @@
 package dev.proprio.mobile.data
 
+import dev.proprio.mobile.domain.WeightUnit
 import dev.proprio.protocol.Consent
 import java.io.File
 import java.time.Instant
@@ -18,6 +19,8 @@ data class UserSettings(
     val leftWristAcknowledged: Boolean = false,
     /** Backend base URL; blank means the build's default (BuildConfig). */
     val serverUrl: String = "",
+    /** How loads are entered and shown. Labels are always stored in kg. */
+    val weightUnit: WeightUnit = WeightUnit.KG,
 ) {
     val firstRunComplete: Boolean get() = participantId.isNotBlank() && leftWristAcknowledged
 

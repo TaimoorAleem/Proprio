@@ -1,5 +1,6 @@
 package dev.proprio.mobile.data
 
+import dev.proprio.protocol.LiveBatch
 import dev.proprio.protocol.MarkKind
 import dev.proprio.protocol.SegmentEvent
 import dev.proprio.protocol.SessionAck
@@ -32,6 +33,15 @@ interface WatchLink {
     /** Session zips received over the channel. */
     val incomingZips: Flow<IncomingZip>
 
+    /** Live preview batches from the watch (display-only; dropped when nobody collects fast enough). */
+    val liveBatches: Flow<LiveBatch>
+
+    /** Starts or renews the watch's live-preview lease. Returns false when no watch is reachable. */
+    suspend fun liveSubscribe(leaseMs: Long): Boolean
+
+    /** Ends the lease early (the live view was hidden). */
+    suspend fun liveUnsubscribe(): Boolean
+
     /** Re-checks reachable nodes. */
     suspend fun refresh()
 
@@ -59,11 +69,28 @@ class FakeWatchLink(private val sessionIdFactory: () -> String = { "00000000-000
     private val _status = MutableStateFlow<WatchStatus?>(WatchStatus(WatchStatus.State.IDLE))
     private val _events = MutableSharedFlow<SegmentEvent>(extraBufferCapacity = 64)
     private val _zips = MutableSharedFlow<IncomingZip>(extraBufferCapacity = 16)
+    private val _live = MutableSharedFlow<LiveBatch>(extraBufferCapacity = 64)
 
     override val connected: StateFlow<Boolean> = _connected.asStateFlow()
     override val status: StateFlow<WatchStatus?> = _status.asStateFlow()
     override val segmentEvents: Flow<SegmentEvent> = _events
     override val incomingZips: Flow<IncomingZip> = _zips
+    override val liveBatches: Flow<LiveBatch> = _live
+
+    /** Lease commands received, e.g. "live/subscribe:10000" or "live/unsubscribe". */
+    val liveCommands = mutableListOf<String>()
+
+    suspend fun emitLive(batch: LiveBatch) = _live.emit(batch)
+
+    override suspend fun liveSubscribe(leaseMs: Long): Boolean {
+        liveCommands += "live/subscribe:$leaseMs"
+        return _connected.value
+    }
+
+    override suspend fun liveUnsubscribe(): Boolean {
+        liveCommands += "live/unsubscribe"
+        return _connected.value
+    }
 
     /** Commands received, in order, as human-readable strings (e.g. "segment/start:SET"). */
     val commands = mutableListOf<String>()

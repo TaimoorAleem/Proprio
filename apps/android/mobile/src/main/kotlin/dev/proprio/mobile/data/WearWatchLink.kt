@@ -10,6 +10,9 @@ import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Node
 import com.google.android.gms.wearable.Wearable
 import dev.proprio.protocol.DataLayer
+import dev.proprio.protocol.LiveBatch
+import dev.proprio.protocol.LiveCodec
+import dev.proprio.protocol.LiveSubscribe
 import dev.proprio.protocol.MarkKind
 import dev.proprio.protocol.SegmentEvent
 import dev.proprio.protocol.SegmentStartCommand
@@ -20,6 +23,7 @@ import dev.proprio.protocol.WatchStatus
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +51,9 @@ class WearWatchLink(private val context: Context) : WatchLink {
     private val _events = MutableSharedFlow<SegmentEvent>(extraBufferCapacity = 64)
     private val _zips = MutableSharedFlow<IncomingZip>(extraBufferCapacity = 16)
 
+    // Display-only: if the UI cannot keep up, the oldest batch goes (never blocks the listener thread).
+    private val _live = MutableSharedFlow<LiveBatch>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
     @Volatile private var nodeId: String? = null
     @Volatile private var listening = false
 
@@ -54,6 +61,12 @@ class WearWatchLink(private val context: Context) : WatchLink {
     override val status: StateFlow<WatchStatus?> = _status.asStateFlow()
     override val segmentEvents: Flow<SegmentEvent> = _events
     override val incomingZips: Flow<IncomingZip> = _zips
+    override val liveBatches: Flow<LiveBatch> = _live
+
+    override suspend fun liveSubscribe(leaseMs: Long): Boolean =
+        send(DataLayer.PATH_LIVE_SUBSCRIBE, DataLayer.encode(LiveSubscribe(leaseMs)))
+
+    override suspend fun liveUnsubscribe(): Boolean = send(DataLayer.PATH_LIVE_UNSUBSCRIBE, ByteArray(0))
 
     override suspend fun refresh() {
         try {
@@ -112,9 +125,23 @@ class WearWatchLink(private val context: Context) : WatchLink {
         }
     }
 
+    /**
+     * Live preview batch from the watch. Not suspending so the listener service can call it in arrival order
+     * (the model treats a lower sequence number as a duplicate).
+     */
+    fun onLiveSamples(data: ByteArray) {
+        _connected.value = true
+        try {
+            _live.tryEmit(LiveCodec.decode(data))
+        } catch (e: IllegalArgumentException) {
+            // Corrupt or newer-version preview batch: display-only, so just skip it.
+        }
+    }
+
     /** Called by [PhoneListenerService] for every message under `/proprio/v1/`. */
     suspend fun onMessage(path: String, data: ByteArray) {
         _connected.value = true // any message proves the watch is reachable
+        if (path == DataLayer.PATH_LIVE_SAMPLES) return onLiveSamples(data)
         try {
             when (path) {
                 DataLayer.PATH_STATUS -> _status.value = DataLayer.decode<WatchStatus>(data)

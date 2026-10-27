@@ -100,6 +100,15 @@ processes on this firmware. Observations that limit the conclusions:
 - `exercise` did start (`USER_STARTING` -> `ACTIVE`, `ENDED` at session end) once `BODY_SENSORS` was granted; it had no effect on Freecess for our process (the exercise lives in the Health Services process).
 - `Dropping ... cached events` did not appear in logcat during these runs; the loss shows as the gap (events not read while frozen).
 
+## Live sensor preview (display only)
+
+`live/` streams the samples the recorder already captured to the phone so the owner can check a set while it is recorded. `SensorRecorder` takes an optional `SampleTap` that is called after the recorder's own queue offer, inside a try/catch: the preview cannot block, reorder or alter what is written (`LivePreviewTest` records the same stream with and without it and compares every file byte for byte, including with a tiny ring and failing sends).
+
+- **Lease** (`LiveLease`): the phone sends `/proprio/v1/live/subscribe` (`LiveSubscribe{leaseMs}`, default 10 s) and renews every 4 s; `/live/unsubscribe` ends it. Streaming happens only while a session records and a lease is valid; the lease also ends with the session. With no phone renewals the batcher coroutine stops within one lease period, so it cannot drain the battery. With no lease, nothing is copied.
+- **Buffering** (`SampleRing`): fixed 2048-sample SPSC ring, no allocation per sample. When full the preview sample is dropped and counted; the recorder is never back-pressured. `LivePreview` builds a batch every 200 ms (all samples at full rate, native units, offsets since session start), encodes it with `LiveCodec` and sends it with a 2 s timeout; a failed send drops that batch (the sequence number lets the phone tell).
+- **Health counters** are kept for the whole session from the sensor thread whether or not anyone watches: gaps > 100 ms (both sensors), acc samples with any |axis| >= 7.8 g, plus samples written, measured rates, recorder queue drops and the writer error flag from `SensorRecorder.snapshot()`.
+- The wire format is documented in `protocol/.../LiveCodec.kt` and `docs/specs/phase2-recorder.md`.
+
 ## Reference device
 Galaxy Watch5 Pro (SM-R920), Android 14 / API 34 (Wear OS 5), build R920XXU1CXK1. Relevant sensors from `dumpsys sensorservice`:
 `LSM6DSO Accelerometer` (STM, 6.25-100 Hz, FIFO 300), `LSM6DSO Gyroscope` (STM, 6.25-100 Hz, no batching),

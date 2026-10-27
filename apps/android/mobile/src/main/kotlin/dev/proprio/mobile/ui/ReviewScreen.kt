@@ -149,11 +149,12 @@ private fun secs(plot: PlotData, tNs: Long) = "%.1f s".format((tNs - plot.tStart
 
 @Composable
 private fun SegmentRow(seg: ResolvedSegment, plot: PlotData, selected: Boolean, onClick: () -> Unit) {
+    val unit = LocalWeightUnit.current
     val title = buildString {
         append(seg.kind?.name?.lowercase() ?: "unlabeled")
         if (seg.implicit) append(" (auto)") else append(" #${seg.segmentId}")
         seg.exercise?.let { append("  $it") }
-        seg.loadKg?.let { append("  ${formatKg(it)} kg") }
+        seg.loadKg?.let { append("  ${unit.display(it)}") }
         seg.repsUser?.let { append("  x$it") }
     }
     Card(
@@ -192,7 +193,9 @@ private fun SegmentEditor(
     }
     var kind by remember(seg.segmentId) { mutableStateOf(seg.kind ?: SegmentKind.SET) }
     var exercise by remember(seg.segmentId) { mutableStateOf(seg.exercise) }
-    var load by remember(seg.segmentId) { mutableStateOf(seg.loadKg?.let { formatKg(it) }.orEmpty()) }
+    val unit = LocalWeightUnit.current
+    val initialLoad = remember(seg.segmentId, unit) { unit.format(seg.loadKg) }
+    var load by remember(seg.segmentId, unit) { mutableStateOf(initialLoad) }
     var category by remember(seg.segmentId) { mutableStateOf(seg.category) }
     var reps by remember(seg.segmentId) { mutableStateOf(seg.repsUser?.toString().orEmpty()) }
     var rpe by remember(seg.segmentId) { mutableStateOf(seg.rpe?.toString().orEmpty()) }
@@ -229,7 +232,7 @@ private fun SegmentEditor(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(load, { load = it }, label = { Text("kg") }, singleLine = true, modifier = Modifier.weight(1f).testTag("edit_load"))
+                    OutlinedTextField(load, { load = it }, label = { Text(unit.label) }, singleLine = true, modifier = Modifier.weight(1f).testTag("edit_load"))
                     OutlinedTextField(reps, { reps = it.filter(Char::isDigit) }, label = { Text("reps") }, singleLine = true, modifier = Modifier.weight(1f).testTag("edit_reps"))
                     OutlinedTextField(rpe, { rpe = it.filter(Char::isDigit) }, label = { Text("RPE") }, singleLine = true, modifier = Modifier.weight(1f).testTag("edit_rpe"))
                 }
@@ -242,7 +245,8 @@ private fun SegmentEditor(
                         SegmentEdit(
                             kind = kind,
                             exercise = exercise,
-                            loadKg = load.replace(',', '.').toDoubleOrNull(),
+                            // untouched text keeps the stored kg exactly (no silent re-rounding through lb)
+                            loadKg = if (load == initialLoad) seg.loadKg else unit.parseKg(load),
                             category = category,
                             repsUser = reps.toIntOrNull(),
                             rpe = rpe.toIntOrNull()?.coerceIn(0, 10),

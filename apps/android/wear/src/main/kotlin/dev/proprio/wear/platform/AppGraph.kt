@@ -11,6 +11,10 @@ import androidx.core.content.ContextCompat
 import dev.proprio.protocol.AppInfo
 import dev.proprio.protocol.DeviceInfo
 import dev.proprio.wear.SystemDeviceClock
+import dev.proprio.protocol.LiveSegmentKind
+import dev.proprio.protocol.MarkKind
+import dev.proprio.wear.live.LiveContext
+import dev.proprio.wear.live.LivePreview
 import dev.proprio.wear.sensor.AndroidSensorSource
 import dev.proprio.wear.sensor.SensorRecorder
 import dev.proprio.wear.session.CommandHandler
@@ -45,12 +49,22 @@ class AppGraph(context: Context) {
         log = ::appLog,
     )
     val strategy = StrategyHolder()
+    private val livePreview = LivePreview(
+        scope = scope,
+        nowMs = { SystemDeviceClock.elapsedRealtimeNs() / 1_000_000L },
+        nowNs = SystemDeviceClock::elapsedRealtimeNs,
+        context = ::liveContext,
+        sender = { path, payload -> transport.sendLive(path, payload) },
+        log = ::appLog,
+    )
+    private val recorder = SensorRecorder(
+        AndroidSensorSource(appContext.getSystemService(SensorManager::class.java), ::appLog),
+        SystemDeviceClock,
+        log = ::appLog,
+        tap = livePreview,
+    )
     val controller = RecordingController(
-        recorder = SensorRecorder(
-            AndroidSensorSource(appContext.getSystemService(SensorManager::class.java), ::appLog),
-            SystemDeviceClock,
-            log = ::appLog,
-        ),
+        recorder = recorder,
         clock = SystemDeviceClock,
         transfer = transfer,
         phone = transport,
@@ -63,7 +77,29 @@ class AppGraph(context: Context) {
         strategy = { strategy.current },
         log = ::appLog,
     )
-    val commands = CommandHandler(controller, ::appLog)
+    val commands = CommandHandler(controller, ::appLog, live = livePreview)
+
+    private fun liveContext(): LiveContext {
+        val ui = controller.state.value
+        val snap = recorder.snapshot()
+        return LiveContext(
+            sessionId = ui.sessionId,
+            segmentId = ui.openSegmentId ?: 0,
+            segmentKind = when {
+                ui.openSegmentId == null -> LiveSegmentKind.NONE
+                ui.openSegmentKind == MarkKind.SET -> LiveSegmentKind.SET
+                ui.openSegmentKind == MarkKind.OTHER -> LiveSegmentKind.OTHER
+                else -> LiveSegmentKind.AUTO
+            },
+            strategy = strategy.current.id,
+            accWritten = snap.accWritten,
+            gyrWritten = snap.gyrWritten,
+            accRateHz = snap.accRateHz,
+            gyrRateHz = snap.gyrRateHz,
+            recorderDropped = snap.droppedEvents,
+            writeError = snap.writeError != null,
+        )
+    }
 
     companion object {
         fun appInfo(context: Context): AppInfo {

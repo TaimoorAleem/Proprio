@@ -21,8 +21,14 @@ object DataLayer {
     const val PATH_SEGMENT_STOP = "$ROOT/segment/stop"
     const val PATH_SESSION_ACK = "$ROOT/session/ack"
 
+    /** Live preview lease (display-only, never recorded; see [LiveSubscribe]). */
+    const val PATH_LIVE_SUBSCRIBE = "$ROOT/live/subscribe"
+    const val PATH_LIVE_UNSUBSCRIBE = "$ROOT/live/unsubscribe"
+
     // watch -> phone
     const val PATH_STATUS = "$ROOT/status"
+    /** Binary [LiveBatch] stream, see [LiveCodec]. */
+    const val PATH_LIVE_SAMPLES = "$ROOT/live/samples"
     const val PATH_SEGMENT_EVENT = "$ROOT/segment/event"
     private const val CHANNEL_PREFIX = "$ROOT/session/zip/"
 
@@ -41,6 +47,8 @@ object DataLayer {
     fun encode(payload: SessionAck): ByteArray = ProtocolJson.encodeToString(payload).toByteArray()
     fun encode(payload: WatchStatus): ByteArray = ProtocolJson.encodeToString(payload).toByteArray()
     fun encode(payload: SegmentEvent): ByteArray = ProtocolJson.encodeToString(payload).toByteArray()
+
+    fun encode(payload: LiveSubscribe): ByteArray = ProtocolJson.encodeToString(payload).toByteArray()
 
     inline fun <reified T> decode(bytes: ByteArray): T = ProtocolJson.decodeFromString(bytes.decodeToString())
 }
@@ -104,3 +112,20 @@ data class SessionAck(
     val sha256: String,
     val ok: Boolean,
 )
+
+/**
+ * Phone -> watch lease for the live sensor preview. The watch streams `/live/samples` only while recording
+ * AND a lease is valid; the phone renews before [leaseMs] elapses and sends `/live/unsubscribe` (empty payload)
+ * when the live view is hidden. The preview is display-only: never stored, uploaded or part of Raw Format v1.
+ */
+@Serializable
+data class LiveSubscribe(val leaseMs: Long = DEFAULT_LEASE_MS) {
+    companion object {
+        const val DEFAULT_LEASE_MS = 10_000L
+        const val MIN_LEASE_MS = 1_000L
+        const val MAX_LEASE_MS = 30_000L
+
+        /** How often the phone renews while the live view is visible. */
+        const val RENEW_INTERVAL_MS = 4_000L
+    }
+}

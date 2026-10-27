@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import dev.proprio.mobile.data.ParticipantId
 import dev.proprio.mobile.data.UserSettings
+import dev.proprio.mobile.domain.WeightUnit
 
 /** First-run setup and later edits: pseudonymous participant id, training consent, left-wrist reminder. */
 @Composable
@@ -35,6 +37,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     /** Extra cards under the form (account and server address; not shown on first run). */
     extra: @Composable () -> Unit = {},
+    /** Persists the weight unit immediately (it is not part of the Save form). */
+    onWeightUnit: (WeightUnit) -> Unit = {},
 ) {
     var id by remember(settings) { mutableStateOf(settings.participantId) }
     var consent by remember(settings) { mutableStateOf(settings.trainingConsent) }
@@ -81,6 +85,21 @@ fun SettingsScreen(
             enabled = valid && wrist,
             modifier = Modifier.fillMaxWidth().testTag("save_settings"),
         ) { Text(if (firstRun) "Continue" else "Save") }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Weight unit")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WeightUnit.entries.forEach { u ->
+                    FilterChip(
+                        selected = settings.weightUnit == u,
+                        onClick = { onWeightUnit(u) },
+                        label = { Text(u.label) },
+                        modifier = Modifier.testTag("unit_${u.label}"),
+                    )
+                }
+            }
+            Text("Loads are always stored in kg; this only changes how you enter and see them.", style = MaterialTheme.typography.bodySmall)
+        }
+
         extra()
     }
 }
