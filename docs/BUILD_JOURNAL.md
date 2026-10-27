@@ -343,6 +343,11 @@ I misread one rotation step and did mostly the wrong axis. Instead of re-recordi
 - **The upload, properly fixed:** the app now says "waiting for server" with the actual error, never gives up, and repairs itself on start. The likely culprit was Android's Doze, which cuts an app's network while the screen is off.
 - **What's left:** squat, bench and deadlift transfer; overhead press is read as bench (both hold the forearm vertical, so only the motion separates them) and rows are partial. That's the next model problem.
 
+### Redoing the session, this time with eyes on the data
+- I couldn't trust my own rep counts from session 1, and nothing told me during the workout whether the watch was recording well. So before redoing it, the phone got a live view: acceleration and rotation graphs streamed from the watch, plus health counters (sampling rate, gaps, sensor saturation, recorder drops).
+- **Design rule:** the preview must never touch the recording. It reads samples after they're queued for writing, drops itself when it can't keep up, and only runs while the phone screen asks for it (a renewable 10 s lease), so a forgotten phone can't drain the watch. A test proves the recorded files are byte-identical with it on or off.
+- **Small data-quality fix:** I enter gym weights in pounds, but the format stores kilograms. The app now has a unit switch and converts on save, with plate loads like 135 lb round-tripping exactly.
+
 ## Housekeeping worth telling
 - **Renamed the GitHub repo to Proprio** and rewrote the README around the product.
 - **Made the interview notes private.** That meant learning the hard way that `.gitignore` doesn't untrack a committed file.

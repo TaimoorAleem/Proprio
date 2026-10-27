@@ -6,7 +6,7 @@
 ## Now
 - **Current phase:** Phase 3: calibration + domain shift (Phases 0–2 complete)
 - **Branch:** work on `feature/*` off `dev`
-- **Next step:** A–C implemented (D-031; report `docs/reports/phase3-u2s1-insample-v2.md`): calibration gate passes in-sample (0.148 g vs 0.237 g), prior v1 ≈ fitted (M1 0.73 both). Upload retry fix merged and on the phone. Owner: check flagged rep counts (review §Rep labels). Orchestrator next: OHP vs bench (decision tree step 2: roll augmentation about the forearm axis, orientation-robust features), expedited upload work, `devices` insert race in core-api. U2 session 2 = the verdict.
+- **Next step:** Owner redoes U2 session 1 with the live preview (phone shows watch rate, gaps, saturation, live acc/gyro) and loads entered in lb via the new unit setting (stored as kg). The redo replaces `918aa36e` in `watch-fit-v1` (D-033); then re-run the in-sample evaluation. Orchestrator: verify the live preview on the watch (needs watch wireless debugging), then OHP vs bench (decision tree step 2).
 
 ## Pending owner tasks
 - [ ] Confirm Android package id (default `dev.proprio`; spec uses `dev.proprio.wear` / `dev.proprio.mobile`)
@@ -102,6 +102,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-10-27: Live sensor preview (watch → phone over the Data Layer, display-only, lease-gated) and a kg/lb weight-unit setting merged; phone APK installed, watch install pending. Owner will redo U2 session 1 (D-033).
 - 2026-10-26: Owner approved A–C; implemented and re-run in-sample (prior v1 now matches the fit, OHP→bench remains). Phone upload: `WAITING_TO_RETRY` state with the error, no retry cap, stale-state recovery, REPLACE instead of chaining behind backoff; Doze found holding jobs while the screen is off.
 - 2026-10-26: U2 session 1 recorded (73 min, 15 sets, 0 gaps), pulled over adb (app upload stuck), DVC-tracked as `watch-fit-v1`, in-sample evaluation + orchestrator review (D-030). Folder renamed to `E:\Projects\Proprio`; compose gained opt-in `PUBLIC_BIND`; phone reaches the stack over Tailscale.
 - 2026-10-25: V4 phone ↔ backend reviewed and merged (D-029). Phase 5 MVP code complete; on-device verification pending.
