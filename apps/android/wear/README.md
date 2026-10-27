@@ -100,6 +100,9 @@ processes on this firmware. Observations that limit the conclusions:
 - `exercise` did start (`USER_STARTING` -> `ACTIVE`, `ENDED` at session end) once `BODY_SENSORS` was granted; it had no effect on Freecess for our process (the exercise lives in the Health Services process).
 - `Dropping ... cached events` did not appear in logcat during these runs; the loss shows as the gap (events not read while frozen).
 
+## Hands-free set start (countdown)
+"Start set" on the watch reads "Start set in N s" (N = the last value the phone sent, default 5; 0 = immediate). During the countdown the screen shows a large number, the watch ticks once a second (`EFFECT_TICK`), and a tap anywhere cancels (double click; a tap within 1 s of the start tap is ignored as an accidental double press). When it reaches zero the set segment opens with one long buzz, and its start timestamp is that moment (`RecordingController.startSegment(..., countdownMs)`, state in `UiState.countdownRemainingMs`, verified with a fake clock in `CountdownTest`). A phone `segment/start` with `countdown_ms` runs the same countdown on the watch; `segment/cancel` cancels it; ending the session cancels it. The countdown is a coroutine on the existing recording scope: no extra wake lock, and the screen is already kept on while recording (D-024). Stop set stays one immediate tap.
+
 ## Live sensor preview (display only)
 
 `live/` streams the samples the recorder already captured to the phone so the owner can check a set while it is recorded. `SensorRecorder` takes an optional `SampleTap` that is called after the recorder's own queue offer, inside a try/catch: the preview cannot block, reorder or alter what is written (`LivePreviewTest` records the same stream with and without it and compares every file byte for byte, including with a tiny ring and failing sends).

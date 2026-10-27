@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import dev.proprio.mobile.data.ParticipantId
 import dev.proprio.mobile.data.UserSettings
 import dev.proprio.mobile.domain.WeightUnit
+import dev.proprio.protocol.SegmentStartCommand
 
 /** First-run setup and later edits: pseudonymous participant id, training consent, left-wrist reminder. */
 @Composable
@@ -39,6 +40,8 @@ fun SettingsScreen(
     extra: @Composable () -> Unit = {},
     /** Persists the weight unit immediately (it is not part of the Save form). */
     onWeightUnit: (WeightUnit) -> Unit = {},
+    /** Persists the start-set countdown immediately (not part of the Save form). */
+    onCountdown: (Long) -> Unit = {},
 ) {
     var id by remember(settings) { mutableStateOf(settings.participantId) }
     var consent by remember(settings) { mutableStateOf(settings.trainingConsent) }
@@ -98,6 +101,27 @@ fun SettingsScreen(
                 }
             }
             Text("Loads are always stored in kg; this only changes how you enter and see them.", style = MaterialTheme.typography.bodySmall)
+        }
+
+        if (!firstRun) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Start set countdown")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SegmentStartCommand.COUNTDOWN_CHOICES_MS.forEach { ms ->
+                        FilterChip(
+                            selected = settings.countdownMs == ms,
+                            onClick = { onCountdown(ms) },
+                            label = { Text(if (ms == 0L) "Off" else "${ms / 1000} s") },
+                            modifier = Modifier.testTag("countdown_${ms / 1000}"),
+                        )
+                    }
+                }
+                Text(
+                    "Tap Start set, grab the bar, and the watch opens the set when the countdown ends (it buzzes each second). " +
+                        "Also used when you start a set on the watch.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         extra()

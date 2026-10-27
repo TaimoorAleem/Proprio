@@ -160,7 +160,7 @@ private fun AppRootContent(container: AppContainer) {
                 val state by vm.state.collectAsState()
                 HistoryScreen(state, onRefresh = vm::refresh, onSignIn = { showAuth = true }, modifier = m)
             }
-            Tab.SETTINGS -> SettingsScreen(settings, firstRun = false, onSave = saveSettings, modifier = m, onWeightUnit = settingsVm::setWeightUnit, extra = {
+            Tab.SETTINGS -> SettingsScreen(settings, firstRun = false, onSave = saveSettings, modifier = m, onWeightUnit = settingsVm::setWeightUnit, onCountdown = settingsVm::setCountdown, extra = {
                 AccountSection(
                     auth = authState,
                     serverUrl = settings.serverUrl,

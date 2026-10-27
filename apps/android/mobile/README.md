@@ -22,6 +22,9 @@ While the watch records, the Session tab shows a **Live** card (Expand opens it 
   - Segment: "SET #12 recording", "OTHER #n recording", "Calibration step #n" or "Rest"; the footer shows samples written per sensor and the anti-freeze strategy.
 - Bad recording = gaps > 0, a rate outside 45..55 Hz, watch recorder not OK, or the "Written" counters not growing. NO DATA/STALE just means the phone link; check again once LIVE.
 
+## Hands-free set start
+Settings > Start set countdown (Off | 3 | 5 | 10 s, default 5, `UserSettings.countdownMs`). "Start set" sends `segment/start` with `countdown_ms`; the watch runs the countdown (ticks, long buzz when the set opens) and owns the timing, so the phone can disconnect. The session screen shows "Starting in N" with a Cancel button (from `WatchStatus.countdown_ends_in_ms`), the live preview's segment chip reads "Starting in N", and the set label is written when the watch's STARTED event arrives, using the exercise/load chosen at the press. The same value is remembered by the watch for sets started on the watch. "Start other" is always immediate.
+
 ## Weight unit
 
 Settings > Weight unit (kg | lb, default kg, persisted in `settings.json`) controls how loads are entered and shown: the set-labeling field and -/+ buttons (2.5 kg or 5 lb), the rep prompt, the Review screen, and the analysis/history cards (`LocalWeightUnit`, `LoadField`, `domain/WeightUnit.kt`). Storage never changes: `labels.json` `load_kg` is always kilograms, with lb input stored as lb x 0.45359237 rounded to 0.01 kg, and lb shown rounded to 0.1, so typical plate loads (45, 135, 225, 315 lb) come back exactly. Existing sessions are untouched; the Review editor keeps the stored kg value unless the load field was edited.

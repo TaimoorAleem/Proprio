@@ -78,6 +78,9 @@ class FakeHaptics : Haptics {
     override fun startBuzz() { events += "start" }
     override fun stopBuzz() { events += "stop" }
     override fun cue() { events += "cue" }
+    override fun countdownTick() { events += "tick" }
+    override fun countdownGo() { events += "go" }
+    override fun countdownCancelled() { events += "cancelled" }
 }
 
 class FakeHost(var allow: Boolean = true) : ForegroundHost {
