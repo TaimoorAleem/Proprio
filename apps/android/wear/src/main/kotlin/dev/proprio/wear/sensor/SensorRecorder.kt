@@ -55,6 +55,8 @@ class SensorRecorder(
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
     private val flushIntervalMs: Long = SessionWriter.DEFAULT_FLUSH_INTERVAL_MS,
     private val log: (String) -> Unit = {},
+    /** Read-only live preview tap; see [SampleTap]. Never affects what is recorded. */
+    private val tap: SampleTap? = null,
 ) {
     private class Sample(val type: Int, val tNs: Long, val x: Float, val y: Float, val z: Float)
 
@@ -119,12 +121,15 @@ class SensorRecorder(
         writer = w
         channel = ch
         drainJob = scope.launch(dispatcher) { drain(w, ch) }
+        runTap { it.onStart(anchor.elapsedRealtimeNs) }
         val ok = source.start(PERIOD_US, MAX_REPORT_LATENCY_US) { type, tNs, x, y, z ->
             when (type) {
                 TYPE_ACC -> accRate.add(tNs)
                 TYPE_GYR -> gyrRate.add(tNs)
             }
             if (ch.trySend(Sample(type, tNs, x, y, z)).isFailure) dropped.incrementAndGet()
+            // After the recording path, so the preview can only ever come second.
+            runTap { it.onSample(type, tNs, x, y, z) }
         }
         if (!ok) {
             abort()
@@ -161,6 +166,7 @@ class SensorRecorder(
     suspend fun stop(): Meta {
         val w = checkNotNull(writer) { "not recording" }
         source.stop()
+        runTap { it.onStop() }
         val endAnchor = clock.captureAnchor()
         channel?.close()
         drainJob?.join()
@@ -173,10 +179,20 @@ class SensorRecorder(
     /** Stops capture without finalizing; `meta.json` stays `complete = false` and files stay readable. */
     fun abort() {
         runCatching { source.stop() }
+        runTap { it.onStop() }
         channel?.close()
         writer?.close()
         drainJob?.cancel()
         reset()
+    }
+
+    private inline fun runTap(block: (SampleTap) -> Unit) {
+        val t = tap ?: return
+        try {
+            block(t)
+        } catch (_: Exception) {
+            // the preview must never disturb the recording
+        }
     }
 
     private fun reset() {
