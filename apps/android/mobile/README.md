@@ -7,6 +7,25 @@
 - **Unconfirmed labels.** The Review screen marks a `set` without `reps_user` as "unconfirmed" (chip in the list, orange bar on the plot). A watch-started set only gets `reps_user` when the user confirms exercise and reps in the stop prompt, so a missing value means the exercise/load were only the phone's guess at press time. No file-format change.
 - **Starting a session from the phone.** The phone first opens Proprio on the watch with a `RemoteActivityHelper` intent (`ACTION_VIEW`, `proprio://session/start?kind=GYM&participant=P01`) so the watch app is visible and may start its foreground service, then sends the usual `session/start` message as a fallback. If both fail the phone shows "Open Proprio on your watch, then try again."
 
+## Live sensor preview
+
+While the watch records, the Session tab shows a **Live** card (Expand opens it full screen): acceleration (g) and angular rate (deg/s) as two stacked rolling 10 s charts (x, y, z in fixed order, three colors per theme, drawn on a Compose `Canvas` with a primitive ring buffer and a ~25 fps redraw cap; no chart library) and a health row. The data is display-only: `WearWatchLink.onLiveSamples` decodes `LiveCodec` batches into `LiveModel` (unit conversion m/s^2 -> g and rad/s -> deg/s happens only there), and nothing is written to the session store or the upload queue.
+
+- **Lease.** `LivePreviewController.runVisible` runs inside `repeatOnLifecycle(STARTED)`: it sends `live/subscribe` (10 s lease) immediately and every 4 s, and `live/unsubscribe` when the panel leaves the screen or the app goes to the background. If that message is lost the watch's lease expires by itself.
+- **Reading the health row** (every item has a text label and a glyph, not just a color):
+  - Link: LIVE (batch in the last 1 s), STALE (older than 1 s), NO DATA (none for 5 s or yet). Only about the phone link.
+  - ACC / GYR rate, measured on the watch: OK for 45..55 Hz, otherwise CHECK (the target is 50 Hz).
+  - Gaps >100 ms: whole-session count of inter-sample gaps on the watch. Should stay 0; anything else is BAD (samples were not delivered or recorded in time).
+  - Saturation: acc samples with any |axis| >= 7.8 g (the sensor range is about 8 g); CHECK when above 0 (clipped data).
+  - Watch recorder: OK, "N dropped" (the recorder queue overflowed) or WRITE ERROR. Both are real data loss.
+  - Preview lost: batches missing in transit (sequence gaps). **Display only**, the recording is not affected.
+  - Segment: "SET #12 recording", "OTHER #n recording", "Calibration step #n" or "Rest"; the footer shows samples written per sensor and the anti-freeze strategy.
+- Bad recording = gaps > 0, a rate outside 45..55 Hz, watch recorder not OK, or the "Written" counters not growing. NO DATA/STALE just means the phone link; check again once LIVE.
+
+## Weight unit
+
+Settings > Weight unit (kg | lb, default kg, persisted in `settings.json`) controls how loads are entered and shown: the set-labeling field and -/+ buttons (2.5 kg or 5 lb), the rep prompt, the Review screen, and the analysis/history cards (`LocalWeightUnit`, `LoadField`, `domain/WeightUnit.kt`). Storage never changes: `labels.json` `load_kg` is always kilograms, with lb input stored as lb x 0.45359237 rounded to 0.01 kg, and lb shown rounded to 0.1, so typical plate loads (45, 135, 225, 315 lb) come back exactly. Existing sessions are untouched; the Review editor keeps the stored kg value unless the load field was edited.
+
 ## Backend (Phase 5, task V4)
 
 The phone talks to `services/core-api` through a client **generated from `contracts/openapi/core-api.yaml` at build time** (`:api-client`, OpenAPI Generator `kotlin` / `jvm-retrofit2` + kotlinx.serialization; nothing generated is committed). `:backend` (pure JVM) holds what is built on top of it: `AuthManager` and the OkHttp `Authenticator`, `UploadCore`, `AnalysisRepository`, `HistoryRepository`. `:mobile` adds the Android parts: `TinkSecretStore`, the WorkManager job (`data/Uploads.kt`) and the screens (`ui/BackendUi.kt`).
