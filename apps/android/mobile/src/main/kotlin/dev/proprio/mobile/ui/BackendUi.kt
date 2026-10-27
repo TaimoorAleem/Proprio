@@ -142,7 +142,7 @@ private fun SegmentRowView(row: SegmentRow) {
             Column(Modifier.weight(1f)) {
                 Text("You", style = MaterialTheme.typography.labelSmall)
                 Text(row.userExercise?.let(::exerciseName) ?: "not labeled")
-                Text("${row.userReps ?: "-"} reps" + (row.loadKg?.let { ", ${formatKg(it)} kg" } ?: ""))
+                Text("${row.userReps ?: "-"} reps" + (row.loadKg?.let { ", ${LocalWeightUnit.current.display(it)}" } ?: ""))
             }
             Column(Modifier.weight(1f)) {
                 Text("Model", style = MaterialTheme.typography.labelSmall)
@@ -204,7 +204,7 @@ private fun LoggedSetRow(set: LoggedSet) {
                 listOfNotNull(
                     set.date.toString().take(16).replace('T', ' '),
                     set.reps?.let { "$it reps" },
-                    set.loadKg?.let { "${formatKg(it.toDouble())} kg" },
+                    set.loadKg?.let { LocalWeightUnit.current.display(it.toDouble()) },
                     if (set.source == LoggedSet.Source.user) "logged by you" else "detected by the model",
                 ).joinToString("  -  "),
                 style = MaterialTheme.typography.bodyMedium,

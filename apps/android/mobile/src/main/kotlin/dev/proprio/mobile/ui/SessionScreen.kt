@@ -123,7 +123,7 @@ fun SessionContent(
         RepPickerDialog(
             shortS = prompt.shortS,
             onDiscard = actions.discard,
-            title = listOfNotNull(prompt.exercise, prompt.loadKg?.let { "${formatKg(it)} kg" }).joinToString(" ")
+            title = listOfNotNull(prompt.exercise, prompt.loadKg?.let { LocalWeightUnit.current.display(it) }).joinToString(" ")
                 .ifEmpty { "Set finished" },
             onSave = actions.confirmReps,
             confirm = if (prompt.fromWatch) {
@@ -193,16 +193,15 @@ private fun SetConfigCard(config: SetConfig, update: ((SetConfig) -> SetConfig) 
                 }
             }
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { update { it.copy(loadKg = ((it.loadKg ?: 0.0) - 2.5).coerceAtLeast(0.0)) } }, enabled = enabled) { Text("-2.5") }
-                OutlinedTextField(
-                    value = config.loadKg?.let { formatKg(it) }.orEmpty(),
-                    onValueChange = { text -> update { it.copy(loadKg = text.replace(',', '.').toDoubleOrNull()) } },
-                    label = { Text("Load (kg)") },
-                    singleLine = true,
+                val unit = LocalWeightUnit.current
+                OutlinedButton(onClick = { update { it.copy(loadKg = unit.stepKg(it.loadKg, -1)) } }, enabled = enabled) { Text("-${unit.stepLabel}") }
+                LoadField(
+                    loadKg = config.loadKg,
+                    onChange = { kg -> update { it.copy(loadKg = kg) } },
                     enabled = enabled,
                     modifier = Modifier.weight(1f).testTag("load"),
                 )
-                OutlinedButton(onClick = { update { it.copy(loadKg = (it.loadKg ?: 0.0) + 2.5) } }, enabled = enabled) { Text("+2.5") }
+                OutlinedButton(onClick = { update { it.copy(loadKg = unit.stepKg(it.loadKg, 1)) } }, enabled = enabled) { Text("+${unit.stepLabel}") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CATEGORIES.forEach { c ->
@@ -253,13 +252,7 @@ private fun ExerciseConfirmSection(cfg: SetConfig, confirmed: Boolean, onChange:
                 )
             }
         }
-        OutlinedTextField(
-            value = cfg.loadKg?.let { formatKg(it) }.orEmpty(),
-            onValueChange = { text -> onChange(cfg.copy(loadKg = text.replace(',', '.').toDoubleOrNull())) },
-            label = { Text("Load (kg)") },
-            singleLine = true,
-            modifier = Modifier.testTag("prompt_load"),
-        )
+        LoadField(loadKg = cfg.loadKg, onChange = { onChange(cfg.copy(loadKg = it)) }, modifier = Modifier.testTag("prompt_load"))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             CATEGORIES.forEach { c ->
                 FilterChip(
@@ -273,7 +266,7 @@ private fun ExerciseConfirmSection(cfg: SetConfig, confirmed: Boolean, onChange:
         FilterChip(
             selected = confirmed,
             onClick = onConfirm,
-            label = { Text("Confirm: ${cfg.exercise}, ${cfg.loadKg?.let { formatKg(it) + " kg" } ?: "no load"}, ${cfg.category}") },
+            label = { Text("Confirm: ${cfg.exercise}, ${cfg.loadKg?.let { LocalWeightUnit.current.display(it) } ?: "no load"}, ${cfg.category}") },
             modifier = Modifier.testTag("confirm_exercise"),
         )
     }
