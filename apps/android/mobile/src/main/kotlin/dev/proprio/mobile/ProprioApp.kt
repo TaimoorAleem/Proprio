@@ -80,6 +80,7 @@ class AppContainer(context: Context) {
     }
 
     val coordinator = SessionCoordinator(scope, link, store, importer, settings, onSessionChanged = ::queueUpload)
+    val live = LivePreviewController(scope, link)
 
     init {
         // Signing in (and every app start while signed in) re-queues sessions that are not fully uploaded;
@@ -107,6 +108,10 @@ class PhoneListenerService : WearableListenerService() {
     override fun onMessageReceived(event: MessageEvent) {
         if (!event.path.startsWith("/proprio/")) return
         val c = container
+        if (event.path == dev.proprio.protocol.DataLayer.PATH_LIVE_SAMPLES) {
+            c.link.onLiveSamples(event.data) // synchronous, keeps arrival order
+            return
+        }
         c.scope.launch { c.link.onMessage(event.path, event.data) }
     }
 

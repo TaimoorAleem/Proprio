@@ -135,7 +135,7 @@ fun AppRoot(container: AppContainer) {
     ) { padding ->
         val m = Modifier.padding(padding)
         when (tab) {
-            Tab.SESSION -> SessionScreen(container.coordinator, m)
+            Tab.SESSION -> SessionScreen(container.coordinator, m, container.live)
             Tab.RECORDINGS -> {
                 val vm: RecordingsViewModel = viewModel(factory = viewModelFactory { initializer { RecordingsViewModel(container.store) } })
                 val items by vm.items.collectAsState()

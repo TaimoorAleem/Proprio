@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import dev.proprio.mobile.LivePreviewController
 import dev.proprio.mobile.SessionCoordinator
 import dev.proprio.mobile.SessionUiState
 import dev.proprio.mobile.SetConfig
@@ -52,7 +53,7 @@ class SessionActions(
 )
 
 @Composable
-fun SessionScreen(coordinator: SessionCoordinator, modifier: Modifier = Modifier) {
+fun SessionScreen(coordinator: SessionCoordinator, modifier: Modifier = Modifier, live: LivePreviewController? = null) {
     val state by coordinator.state.collectAsState()
     val actions = remember(coordinator) {
         SessionActions(
@@ -61,11 +62,17 @@ fun SessionScreen(coordinator: SessionCoordinator, modifier: Modifier = Modifier
             coordinator::dismissMessage, coordinator::refreshConnection,
         )
     }
-    SessionContent(state, actions, modifier)
+    SessionContent(state, actions, modifier, live)
 }
 
 @Composable
-fun SessionContent(state: SessionUiState, actions: SessionActions, modifier: Modifier = Modifier) {
+fun SessionContent(
+    state: SessionUiState,
+    actions: SessionActions,
+    modifier: Modifier = Modifier,
+    live: LivePreviewController? = null,
+    liveTickMs: Long = 40,
+) {
     val watch = state.watch
     val recording = watch?.state == WatchStatus.State.RECORDING
     val gym = recording && watch.sessionKind != SessionKind.CALIBRATION
@@ -97,6 +104,7 @@ fun SessionContent(state: SessionUiState, actions: SessionActions, modifier: Mod
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start calibration") }
         } else {
+            live?.let { LiveSection(it, tickMs = liveTickMs) }
             if (gym) {
                 SetConfigCard(state.config, actions.setConfig, enabled = state.open == null)
                 SetButtons(state, actions)
