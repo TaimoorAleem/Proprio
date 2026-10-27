@@ -13,6 +13,7 @@ import dev.proprio.protocol.DeviceInfo
 import dev.proprio.wear.SystemDeviceClock
 import dev.proprio.protocol.LiveSegmentKind
 import dev.proprio.protocol.MarkKind
+import dev.proprio.protocol.SegmentStartCommand
 import dev.proprio.wear.live.LiveContext
 import dev.proprio.wear.live.LivePreview
 import dev.proprio.wear.sensor.AndroidSensorSource
@@ -63,6 +64,7 @@ class AppGraph(context: Context) {
         log = ::appLog,
         tap = livePreview,
     )
+    private val countdownPrefs = appContext.getSharedPreferences("proprio_prefs", Context.MODE_PRIVATE)
     val controller = RecordingController(
         recorder = recorder,
         clock = SystemDeviceClock,
@@ -76,6 +78,8 @@ class AppGraph(context: Context) {
         exercise = HealthServicesExercise(appContext, ::appLog),
         strategy = { strategy.current },
         log = ::appLog,
+        initialCountdownMs = countdownPrefs.getLong(KEY_COUNTDOWN_MS, SegmentStartCommand.DEFAULT_COUNTDOWN_MS),
+        onCountdownDefault = { countdownPrefs.edit().putLong(KEY_COUNTDOWN_MS, it).apply() },
     )
     val commands = CommandHandler(controller, ::appLog, live = livePreview)
 
@@ -102,6 +106,8 @@ class AppGraph(context: Context) {
     }
 
     companion object {
+        private const val KEY_COUNTDOWN_MS = "countdown_ms"
+
         fun appInfo(context: Context): AppInfo {
             val pi = context.packageManager.getPackageInfo(context.packageName, 0)
             return AppInfo(context.packageName, pi.versionName ?: "unknown", pi.longVersionCode.toInt())
@@ -143,4 +149,14 @@ class VibratorHaptics(context: Context) : Haptics {
     override fun startBuzz() = play(longArrayOf(0, 120))
     override fun stopBuzz() = play(longArrayOf(0, 80, 80, 80))
     override fun cue() = play(longArrayOf(0, 200, 100, 200, 100, 200))
+
+    // Countdown cues use the built-in effects where they exist (API 29+, the watch is API 30+) so they feel native
+    // and are clearly different from each other: tick (light), go (one long buzz), cancel (double click).
+    override fun countdownTick() = predefined(VibrationEffect.EFFECT_TICK)
+    override fun countdownGo() = play(longArrayOf(0, 450))
+    override fun countdownCancelled() = predefined(VibrationEffect.EFFECT_DOUBLE_CLICK)
+
+    private fun predefined(effect: Int) {
+        vibrator?.vibrate(VibrationEffect.createPredefined(effect))
+    }
 }

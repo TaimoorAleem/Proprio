@@ -50,6 +50,7 @@ class SessionActions(
     val discard: () -> Unit,
     val dismissMessage: () -> Unit,
     val refresh: () -> Unit,
+    val cancelCountdown: () -> Unit = {},
 )
 
 @Composable
@@ -59,7 +60,7 @@ fun SessionScreen(coordinator: SessionCoordinator, modifier: Modifier = Modifier
         SessionActions(
             coordinator::startSession, coordinator::endSession, coordinator::startSet, coordinator::startOther,
             coordinator::stopSegment, coordinator::setConfig, coordinator::confirmReps, coordinator::dismissPrompt, coordinator::discardSegment,
-            coordinator::dismissMessage, coordinator::refreshConnection,
+            coordinator::dismissMessage, coordinator::refreshConnection, coordinator::cancelCountdown,
         )
     }
     SessionContent(state, actions, modifier, live)
@@ -104,9 +105,9 @@ fun SessionContent(
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start calibration") }
         } else {
-            live?.let { LiveSection(it, tickMs = liveTickMs) }
+            live?.let { LiveSection(it, tickMs = liveTickMs, countdownMs = state.countdownMs) }
             if (gym) {
-                SetConfigCard(state.config, actions.setConfig, enabled = state.open == null)
+                SetConfigCard(state.config, actions.setConfig, enabled = state.open == null && state.countdownMs == null)
                 SetButtons(state, actions)
             } else {
                 Text("Calibration: follow the prompts on the watch.", style = MaterialTheme.typography.bodyLarge)
@@ -161,8 +162,10 @@ private fun StatusCard(state: SessionUiState, refresh: () -> Unit) {
                     Text("Recording ${formatElapsed(watch.elapsedS)}", Modifier.testTag("recording"))
                     Text("acc ${formatHz(watch.accRateHz)}  gyro ${formatHz(watch.gyrRateHz)}", Modifier.testTag("rates"))
                     val open = state.open
+                    val countdown = state.countdownMs
                     val openText = when {
                         watch.calibrationStep != null -> "Calibration step: ${watch.calibrationStep}"
+                        countdown != null -> "Starting in ${countdownSeconds(countdown)}"
                         open != null -> "Open segment: ${open.kind.name.lowercase()} #${open.segmentId}"
                         watch.openSegmentId != null -> "Open segment #${watch.openSegmentId}"
                         else -> "No open segment"
@@ -221,10 +224,23 @@ private fun SetConfigCard(config: SetConfig, update: ((SetConfig) -> SetConfig) 
 @Composable
 private fun SetButtons(state: SessionUiState, actions: SessionActions) {
     val open = state.open
+    val countdown = state.countdownMs
+    if (countdown != null) {
+        Card(Modifier.fillMaxWidth().testTag("countdown_card")) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Starting in ${countdownSeconds(countdown)}", Modifier.testTag("countdown_text"), style = MaterialTheme.typography.headlineMedium)
+                Text("The set opens on the watch when the countdown ends.", style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = actions.cancelCountdown, modifier = Modifier.fillMaxWidth().testTag("cancel_countdown")) {
+                    Text("Cancel countdown")
+                }
+            }
+        }
+        return
+    }
     when (open?.kind) {
         null -> {
             Button(onClick = actions.startSet, modifier = Modifier.fillMaxWidth().height(96.dp)) {
-                Text("Start set", style = MaterialTheme.typography.headlineSmall)
+                Text(startSetLabel(state.startSetCountdownMs), style = MaterialTheme.typography.headlineSmall)
             }
             OutlinedButton(onClick = actions.startOther, modifier = Modifier.fillMaxWidth()) { Text("Start other") }
         }
@@ -359,6 +375,12 @@ private fun ShortOtherDialog(shortS: Double, onDiscard: () -> Unit, onKeep: () -
         dismissButton = { TextButton(onClick = onKeep, modifier = Modifier.testTag("keep_segment")) { Text("Keep") } },
     )
 }
+
+/** Whole seconds shown for a remaining time: 5 .. 1. */
+internal fun countdownSeconds(remainingMs: Long): Int = ((remainingMs + 999) / 1000).toInt()
+
+internal fun startSetLabel(countdownMs: Long): String =
+    if (countdownMs <= 0L) "Start set" else "Start set in ${countdownSeconds(countdownMs)} s"
 
 internal fun formatElapsed(s: Double?): String {
     val total = Math.round(s ?: 0.0).toInt()

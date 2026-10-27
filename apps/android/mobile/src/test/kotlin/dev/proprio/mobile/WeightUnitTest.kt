@@ -122,7 +122,7 @@ class WeightUnitUiTest {
 
     private fun coordinator(link: FakeWatchLink, store: SessionStore) = SessionCoordinator(
         scope, link, store, SessionImporter(store),
-        MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true)),
+        MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true, countdownMs = 0)),
         io = Dispatchers.Unconfined,
     )
 

@@ -61,7 +61,7 @@ class ComposeUiTest {
         val store = SessionStore(File(tmp.root, "sessions"), header = { LabelHeader("P01", Consent(true, "2026-01-01T00:00:00Z")) })
         val coordinator = SessionCoordinator(
             scope, link, store, SessionImporter(store),
-            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true)),
+            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true, countdownMs = 0)),
             io = Dispatchers.Unconfined,
         )
         compose.setContent { ProprioTheme { SessionScreen(coordinator) } }
@@ -113,7 +113,7 @@ class ComposeUiTest {
         val store = SessionStore(File(tmp.root, "sessions"), header = { LabelHeader("P01", Consent(true, "2026-01-01T00:00:00Z")) })
         val coordinator = SessionCoordinator(
             scope, link, store, SessionImporter(store),
-            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true)),
+            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true, countdownMs = 0)),
             io = Dispatchers.Unconfined,
         )
         compose.setContent { ProprioTheme { SessionScreen(coordinator) } }
@@ -139,7 +139,7 @@ class ComposeUiTest {
         val link = FakeWatchLink { SID }.also { it.setConnected(false) }
         val store = SessionStore(File(tmp.root, "sessions"), header = { LabelHeader("P01", Consent(false, "x")) })
         val coordinator = SessionCoordinator(
-            scope, link, store, SessionImporter(store), MemorySettingsStore(UserSettings("P01")), io = Dispatchers.Unconfined,
+            scope, link, store, SessionImporter(store), MemorySettingsStore(UserSettings("P01", countdownMs = 0)), io = Dispatchers.Unconfined,
         )
         compose.setContent { ProprioTheme { SessionScreen(coordinator) } }
         compose.onNodeWithText("Watch not connected").assertExists()
@@ -238,7 +238,7 @@ class ComposeUiTest {
         val store = SessionStore(File(tmp.root, "sessions"), header = { LabelHeader("P01", Consent(true, "2026-01-01T00:00:00Z")) })
         val coordinator = SessionCoordinator(
             scope, link, store, SessionImporter(store),
-            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true)),
+            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true, countdownMs = 0)),
             io = Dispatchers.Unconfined,
         )
         compose.setContent { ProprioTheme { SessionScreen(coordinator) } }

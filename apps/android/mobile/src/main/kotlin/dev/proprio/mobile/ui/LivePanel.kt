@@ -73,6 +73,8 @@ fun LivePanel(
     onToggleExpand: () -> Unit,
     modifier: Modifier = Modifier,
     tickMs: Long = 40,
+    /** Remaining time of a start countdown on the watch; the segment chip then reads "Starting in N". */
+    countdownMs: Long? = null,
 ) {
     val model = controller.model
     val owner = LocalLifecycleOwner.current
@@ -104,7 +106,7 @@ fun LivePanel(
                 Text(if (expanded) "Close" else "Expand")
             }
         }
-        HealthRow(health)
+        HealthRow(if (countdownMs != null) health.copy(segment = "Starting in ${countdownSeconds(countdownMs)}") else health)
         Legend(colors)
         val chartMod = if (expanded) Modifier.weight(1f) else Modifier.height(150.dp)
         SensorChart(
@@ -124,17 +126,17 @@ private const val HEALTH_EVERY = 6L // about 4 Hz at 40 ms ticks
 
 /** Inline card variant plus the full-screen dialog; only one of them is composed at a time (one lease holder). */
 @Composable
-fun LiveSection(controller: LivePreviewController, modifier: Modifier = Modifier, tickMs: Long = 40) {
+fun LiveSection(controller: LivePreviewController, modifier: Modifier = Modifier, tickMs: Long = 40, countdownMs: Long? = null) {
     var expanded by remember { mutableStateOf(false) }
     if (expanded) {
         Dialog(onDismissRequest = { expanded = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize()) {
-                LivePanel(controller, expanded = true, onToggleExpand = { expanded = false }, modifier = Modifier.padding(12.dp).fillMaxHeight(), tickMs = tickMs)
+                LivePanel(controller, expanded = true, onToggleExpand = { expanded = false }, modifier = Modifier.padding(12.dp).fillMaxHeight(), tickMs = tickMs, countdownMs = countdownMs)
             }
         }
     } else {
         Card(modifier.fillMaxWidth()) {
-            LivePanel(controller, expanded = false, onToggleExpand = { expanded = true }, modifier = Modifier.padding(12.dp), tickMs = tickMs)
+            LivePanel(controller, expanded = false, onToggleExpand = { expanded = true }, modifier = Modifier.padding(12.dp), tickMs = tickMs, countdownMs = countdownMs)
         }
     }
 }

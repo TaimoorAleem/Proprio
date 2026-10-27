@@ -107,8 +107,10 @@ class WearWatchLink(private val context: Context) : WatchLink {
 
     override suspend fun endSession(): Boolean = send(DataLayer.PATH_SESSION_END, ByteArray(0))
 
-    override suspend fun startSegment(kind: MarkKind): Boolean =
-        send(DataLayer.PATH_SEGMENT_START, DataLayer.encode(SegmentStartCommand(kind)))
+    override suspend fun startSegment(kind: MarkKind, countdownMs: Long): Boolean =
+        send(DataLayer.PATH_SEGMENT_START, DataLayer.encode(SegmentStartCommand(kind, SegmentStartCommand.clampCountdown(countdownMs))))
+
+    override suspend fun cancelCountdown(): Boolean = send(DataLayer.PATH_SEGMENT_CANCEL, ByteArray(0))
 
     override suspend fun stopSegment(): Boolean = send(DataLayer.PATH_SEGMENT_STOP, ByteArray(0))
 

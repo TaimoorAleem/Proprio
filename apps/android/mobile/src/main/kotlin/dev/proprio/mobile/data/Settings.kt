@@ -2,6 +2,7 @@ package dev.proprio.mobile.data
 
 import dev.proprio.mobile.domain.WeightUnit
 import dev.proprio.protocol.Consent
+import dev.proprio.protocol.SegmentStartCommand
 import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,8 @@ data class UserSettings(
     val serverUrl: String = "",
     /** How loads are entered and shown. Labels are always stored in kg. */
     val weightUnit: WeightUnit = WeightUnit.KG,
+    /** Hands-free "Start set" countdown sent to the watch with the command; 0 = start immediately. */
+    val countdownMs: Long = SegmentStartCommand.DEFAULT_COUNTDOWN_MS,
 ) {
     val firstRunComplete: Boolean get() = participantId.isNotBlank() && leftWristAcknowledged
 

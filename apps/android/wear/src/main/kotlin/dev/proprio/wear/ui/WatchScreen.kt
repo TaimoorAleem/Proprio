@@ -1,6 +1,9 @@
 package dev.proprio.wear.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +50,32 @@ val IDLE_PALETTE = WatchPalette(Color(0xFF000000), Color(0xFFE0E0E0), Color(0xFF
 
 fun watchPalette(state: UiState): WatchPalette = if (state.recording) RECORDING_PALETTE else IDLE_PALETTE
 
+/** "Start set" (immediate) or "Start set in N s" for a countdown. */
+fun startSetLabel(countdownMs: Long): String =
+    if (countdownMs <= 0L) "Start set" else "Start set in ${(countdownMs + 999) / 1000} s"
+
+/** Whole seconds shown on the countdown screen: 5 .. 1. */
+fun countdownSeconds(remainingMs: Long): Int = ((remainingMs + 999) / 1000).toInt()
+
+/** Full-screen countdown: a big number; a tap anywhere cancels. */
+@Composable
+private fun CountdownScreen(remainingMs: Long, onCancel: () -> Unit) {
+    Box(
+        Modifier.fillMaxSize().background(Color.Black).clickable(onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "${countdownSeconds(remainingMs)}",
+                color = Color.White,
+                fontSize = 72.sp,
+                modifier = Modifier.testTag("countdown_number"),
+            )
+            Text("Tap to cancel", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
 fun formatElapsed(s: Double): String {
     val t = s.toInt()
     return "%d:%02d".format(t / 60, t % 60)
@@ -63,9 +92,15 @@ fun WatchScreen(
     onStartCalibration: () -> Unit,
     onRetryTransfers: () -> Unit,
     ambient: Boolean = false,
+    onCancelCountdown: () -> Unit = {},
 ) {
     if (ambient) {
         AmbientScreen(state)
+        return
+    }
+    val countdownMs = state.countdownRemainingMs
+    if (state.recording && countdownMs != null) {
+        CountdownScreen(countdownMs, onCancelCountdown)
         return
     }
     val palette = watchPalette(state)
@@ -107,7 +142,7 @@ fun WatchScreen(
             } else {
                 val open = state.openSegmentId
                 if (open == null) {
-                    item { Button(colors = ButtonDefaults.buttonColors(containerColor = palette.button, contentColor = palette.content), onClick = onStartSet) { Text("Start set") } }
+                    item { Button(colors = ButtonDefaults.buttonColors(containerColor = palette.button, contentColor = palette.content), onClick = onStartSet) { Text(startSetLabel(state.setCountdownMs)) } }
                     item { Button(colors = ButtonDefaults.buttonColors(containerColor = palette.button, contentColor = palette.content), onClick = onStartOther) { Text("Start other") } }
                 } else {
                     val what = if (state.openSegmentKind == MarkKind.OTHER) "other" else "set"

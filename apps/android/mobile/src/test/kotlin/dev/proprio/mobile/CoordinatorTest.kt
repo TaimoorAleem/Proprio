@@ -44,7 +44,7 @@ class CoordinatorTest {
         store = SessionStore(File(tmp.root, "sessions"), header = { LabelHeader("P01", Consent(true, "2026-01-01T00:00:00Z")) })
         coordinator = SessionCoordinator(
             scope, link, store, SessionImporter(store),
-            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true)),
+            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true, countdownMs = 0)),
             io = Dispatchers.Unconfined,
             nowMs = { nowMs },
         )

@@ -31,8 +31,11 @@ class CommandHandler(
                 DataLayer.PATH_SESSION_END -> controller.endSession(SegmentSource.PHONE)
                 DataLayer.PATH_SEGMENT_START -> {
                     val cmd = DataLayer.decode<SegmentStartCommand>(data)
-                    controller.startSegment(cmd.kind, SegmentSource.PHONE)
+                    // The countdown length doubles as the default for watch-initiated set starts.
+                    if (cmd.kind == dev.proprio.protocol.MarkKind.SET) controller.rememberCountdown(cmd.countdownMs)
+                    controller.startSegment(cmd.kind, SegmentSource.PHONE, cmd.countdownMs)
                 }
+                DataLayer.PATH_SEGMENT_CANCEL -> controller.cancelCountdown(SegmentSource.PHONE)
                 DataLayer.PATH_SEGMENT_STOP -> controller.stopSegment(SegmentSource.PHONE)
                 DataLayer.PATH_SESSION_ACK -> controller.handleAck(DataLayer.decode<SessionAck>(data))
                 DataLayer.PATH_LIVE_SUBSCRIBE -> {

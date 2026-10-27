@@ -13,12 +13,43 @@ class DataLayerTest {
             DataLayer.PATH_SESSION_END,
             DataLayer.PATH_SEGMENT_START,
             DataLayer.PATH_SEGMENT_STOP,
+            DataLayer.PATH_SEGMENT_CANCEL,
             DataLayer.PATH_SESSION_ACK,
             DataLayer.PATH_STATUS,
             DataLayer.PATH_SEGMENT_EVENT,
         )
         assertEquals(paths.size, paths.toSet().size)
         assertTrue(paths.all { it.startsWith("/proprio/v1/") })
+    }
+
+    @Test
+    fun countdownFieldsAreOptionalAndBackwardCompatible() {
+        // payloads from before the countdown existed decode exactly as before
+        val oldStart = DataLayer.decode<SegmentStartCommand>("""{"kind": "set"}""".toByteArray())
+        assertEquals(SegmentStartCommand(MarkKind.SET, countdownMs = 0), oldStart)
+        val oldStatus = DataLayer.decode<WatchStatus>(
+            """{"state": "recording", "session_id": "s1", "open_segment_id": 2}""".toByteArray(),
+        )
+        assertEquals(WatchStatus(WatchStatus.State.RECORDING, sessionId = "s1", openSegmentId = 2), oldStatus)
+        assertNull(oldStatus.countdownEndsInMs)
+
+        // new fields use snake_case keys and round-trip
+        val start = SegmentStartCommand(MarkKind.SET, countdownMs = 5_000)
+        assertTrue(DataLayer.encode(start).decodeToString().contains("\"countdown_ms\": 5000"))
+        assertEquals(start, DataLayer.decode<SegmentStartCommand>(DataLayer.encode(start)))
+        val status = WatchStatus(WatchStatus.State.RECORDING, sessionId = "s1", countdownEndsInMs = 3_200)
+        assertTrue(DataLayer.encode(status).decodeToString().contains("\"countdown_ends_in_ms\": 3200"))
+        assertEquals(status, DataLayer.decode<WatchStatus>(DataLayer.encode(status)))
+        // a status without a countdown carries no countdown key at all
+        assertTrue(!DataLayer.encode(WatchStatus(WatchStatus.State.IDLE)).decodeToString().contains("countdown"))
+    }
+
+    @Test
+    fun countdownIsClamped() {
+        assertEquals(0L, SegmentStartCommand.clampCountdown(-5))
+        assertEquals(10_000L, SegmentStartCommand.clampCountdown(10_000))
+        assertEquals(SegmentStartCommand.MAX_COUNTDOWN_MS, SegmentStartCommand.clampCountdown(9_999_999))
+        assertTrue(SegmentStartCommand.COUNTDOWN_CHOICES_MS.all { it in 0..SegmentStartCommand.MAX_COUNTDOWN_MS })
     }
 
     @Test
