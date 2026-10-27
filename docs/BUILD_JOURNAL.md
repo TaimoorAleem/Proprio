@@ -348,6 +348,8 @@ I misread one rotation step and did mostly the wrong axis. Instead of re-recordi
 - **Design rule:** the preview must never touch the recording. It reads samples after they're queued for writing, drops itself when it can't keep up, and only runs while the phone screen asks for it (a renewable 10 s lease), so a forgotten phone can't drain the watch. A test proves the recorded files are byte-identical with it on or off.
 - **Small data-quality fix:** I enter gym weights in pounds, but the format stores kilograms. The app now has a unit switch and converts on save, with plate loads like 135 lb round-tripping exactly.
 
+- **Hands on the bar first:** a set now starts after a countdown with haptic ticks, and its timestamp is the end of the countdown, so walking up to the bar isn't inside the set.
+
 ## Housekeeping worth telling
 - **Renamed the GitHub repo to Proprio** and rewrote the README around the product.
 - **Made the interview notes private.** That meant learning the hard way that `.gitignore` doesn't untrack a committed file.
