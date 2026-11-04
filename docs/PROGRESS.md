@@ -102,6 +102,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-04: BUILD_JOURNAL rewritten for beginner ML readers (theory boxes, glossary).
 - 2026-10-27: Countdown set start merged (D-034); needs installing and an on-wrist check.
 - 2026-10-27: Live preview verified on device by the owner (watch + phone). Ready for the U2 session-1 redo.
 - 2026-10-27: Live sensor preview (watch → phone over the Data Layer, display-only, lease-gated) and a kg/lb weight-unit setting merged; phone APK installed, watch install pending. Owner will redo U2 session 1 (D-033).
