@@ -31,13 +31,9 @@ class UploadWorkerTest {
 
     private class FakeRunner(var outcome: UploadOutcome) : UploadRunner {
         val uploaded = mutableListOf<String>()
-        val gaveUp = mutableListOf<Pair<String, String>>()
         override suspend fun upload(sessionId: String): UploadOutcome {
             uploaded += sessionId
             return outcome
-        }
-        override fun giveUp(sessionId: String, reason: String) {
-            gaveUp += sessionId to reason
         }
     }
 
@@ -69,15 +65,10 @@ class UploadWorkerTest {
     }
 
     @Test
-    fun transientFailure_isRetriedWithBackoff_untilTheAttemptCap() {
+    fun transientFailure_isRetriedWithBackoff_withNoAttemptCap() {
         val runner = FakeRunner(UploadOutcome.Retry("offline"))
 
-        assertEquals(Result.retry(), run(runner, attempt = 0))
-        assertEquals(Result.retry(), run(runner, attempt = UploadWorker.MAX_ATTEMPTS - 2))
-        assertTrue(runner.gaveUp.isEmpty())
-
-        assertEquals(Result.failure(), run(runner, attempt = UploadWorker.MAX_ATTEMPTS - 1))
-        assertEquals(listOf("sess-1" to "offline"), runner.gaveUp)
+        for (attempt in listOf(0, 5, 6, 50, 500)) assertEquals(Result.retry(), run(runner, attempt = attempt))
     }
 
     @Test
@@ -123,5 +114,29 @@ class UploadWorkerTest {
 
         assertEquals(WorkInfo.State.ENQUEUED, awaitSettled(wm, id))
         assertEquals(1, wm.getWorkInfoById(id).get()!!.runAttemptCount)
+    }
+
+    @Test
+    fun requeueingWhileWaitingInBackoff_replacesTheWaitingJob_insteadOfChainingBehindIt() {
+        val runner = FakeRunner(UploadOutcome.Retry("503"))
+        WorkManagerTestInitHelper.initializeTestWorkManager(
+            context,
+            Configuration.Builder().setWorkerFactory(UploadWorkerFactory { runner }).build(),
+        )
+        val wm = WorkManager.getInstance(context)
+        val scheduler = WorkUploadScheduler(wm)
+        scheduler.enqueue("sess-3")
+        val first = wm.getWorkInfosForUniqueWork("upload-sess-3").get().single().id
+        WorkManagerTestInitHelper.getTestDriver(context)!!.setAllConstraintsMet(first)
+        assertEquals(WorkInfo.State.ENQUEUED, awaitSettled(wm, first)) // now waiting in backoff
+        assertTrue(!scheduler.isRunning("sess-3"))
+
+        scheduler.enqueue("sess-3") // app start / "Upload now"
+
+        val infos = wm.getWorkInfosForUniqueWork("upload-sess-3").get()
+        assertTrue("old waiting job is replaced, not chained behind", infos.none { it.id == first })
+        val fresh = infos.single()
+        assertEquals(0, fresh.runAttemptCount)
+        assertEquals(WorkInfo.State.ENQUEUED, fresh.state)
     }
 }

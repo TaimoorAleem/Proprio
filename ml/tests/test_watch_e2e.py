@@ -29,7 +29,11 @@ def synth(tmp_path_factory):
         f"watch-fit-v1: {{sessions: [{GYM_ID}]}}\n"
         "watch-val-v1: {sessions: []}\n"
     )
-    return {"tmp": tmp, "R": R, "ds": ds, "mm": mm_cleaned(rng, sets_per_label=3, duration_s=18.0)}
+    mm = mm_cleaned(rng, sets_per_label=3, duration_s=18.0)
+    # realistic between-participant spread of the per-exercise gravity (relative Kabsch gate)
+    mm.loc[mm["participant"] == "A", "acc_x"] += 0.05
+    mm.loc[mm["participant"] == "B", "acc_x"] -= 0.05
+    return {"tmp": tmp, "R": R, "ds": ds, "mm": mm}
 
 
 def test_in_sample_end_to_end(synth, tmp_path):
@@ -115,6 +119,6 @@ def test_no_gym_sessions_yet_exits_cleanly(synth, tmp_path, capsys):
 
 def test_calibrate_cli_with_empty_fit_dataset(tmp_path, capsys):
     out = tmp_path / "fit.json"
-    assert calibrate.main(["--fit", "watch-fit-v1", "--out", str(out)]) == 0
+    assert calibrate.main(["--fit", "watch-u3-v1", "--out", str(out)]) == 0
     assert "no gym sessions yet" in capsys.readouterr().out
     assert json.loads(Path(out).read_text())["status"] == "no gym sessions yet"

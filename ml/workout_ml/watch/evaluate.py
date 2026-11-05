@@ -36,7 +36,7 @@ from workout_ml.watch import metrics as M  # noqa: E402
 from workout_ml.watch.calibrate import (  # noqa: E402
     FITTED_PROFILE_ID,
     PRIOR_PROFILE_ID,
-    RESIDUAL_GATE_G,
+    RESIDUAL_SPREAD_FACTOR,
     fit_rotation,
     fitted_profile,
     identity_profile,
@@ -237,11 +237,14 @@ def rotation_residual(R, fit) -> float:
     return float(np.sqrt(np.sum(w * res**2) / w.sum()))
 
 
-def calibration_status(calib: dict | None, residual_g: float | None) -> str:
-    """Calibration gate: calibration_check on watch-calib-v1 plus Kabsch residual < 0.15 g."""
-    if calib is None or residual_g is None or not calib.get("sessions"):
+def calibration_status(
+    calib: dict | None, residual_g: float | None, threshold_g: float | None = None
+) -> str:
+    """Calibration gate: calibration_check passes AND the Kabsch residual is within the
+    relative threshold (RESIDUAL_SPREAD_FACTOR x MetaMotion between-participant spread)."""
+    if calib is None or residual_g is None or threshold_g is None or not calib.get("sessions"):
         return M.NA
-    ok = bool(calib["passed"]) and residual_g < RESIDUAL_GATE_G
+    ok = bool(calib["passed"]) and residual_g <= threshold_g
     return M.PASS if ok else M.FAIL
 
 
@@ -368,7 +371,7 @@ def run(
     for m in models:
         for pname in PROFILES:
             res_g = rotation_residual(profiles[pname].rotation, fit_res)
-            cs = calibration_status(calib_res, res_g)
+            cs = calibration_status(calib_res, res_g, fit_res.residual_threshold_g)
             win = window_frame(bank, m, pdata[pname])
             r = evaluate_row(win, pdata[pname], tau, baseline=base.get(m), calibration_status=cs)
             r["residual_g"] = res_g
@@ -499,6 +502,8 @@ def _log_mlflow(ctx, tracking_uri, artifact_root) -> dict:
                 "kabsch_residual_g": fit_res.residual_rms_g,
                 "angle_from_prior_deg": fit_res.angle_from_prior_deg,
                 "lever_min_g": fit_res.lever_min_g,
+                "mm_spread_g": fit_res.mm_spread_g,
+                "residual_threshold_g": fit_res.residual_threshold_g,
                 **(
                     {"gyro_profile_r": fit_res.gyro_profile_r}
                     if fit_res.gyro_profile_r is not None
@@ -553,6 +558,8 @@ def flat_metrics(ctx) -> dict:
         "mode": ctx["mode"],
         "tau": ctx["tau"],
         "kabsch_residual_g": ctx["fit_res"].residual_rms_g,
+        "mm_spread_g": ctx["fit_res"].mm_spread_g,
+        "residual_threshold_g": ctx["fit_res"].residual_threshold_g,
         "angle_from_prior_deg": ctx["fit_res"].angle_from_prior_deg,
         "gyro_profile_r": ctx["fit_res"].gyro_profile_r,
         "domain_auc": ctx["diag"]["domain"]["auc"],
@@ -643,7 +650,8 @@ def render_report(ctx: dict) -> str:
     L += [
         "## Rotation fit (weighted Kabsch)",
         "",
-        f"Fitted on {', '.join(fr.exercises)} (weights = sets: "
+        f"Fitted on lifts only ({', '.join(fr.exercises)}; rest and other excluded on both sides) "
+        f"(weights = lift sets: "
         + ", ".join(f"{e} {int(w)}" for e, w in fr.weights.items())
         + ").",
         "",
@@ -652,7 +660,8 @@ def render_report(ctx: dict) -> str:
         _matrix(fr.R),
         "",
         f"- det(R*) = {det:+.3f}",
-        f"- Residual (weighted RMS): {_fmt(fr.residual_rms_g)} g (gate < {RESIDUAL_GATE_G}); "
+        f"- Residual (weighted RMS): {_fmt(fr.residual_rms_g)} g (gate <= {_fmt(fr.residual_threshold_g)} g = {RESIDUAL_SPREAD_FACTOR} x MetaMotion "
+        f"between-participant spread {_fmt(fr.mm_spread_g)} g); "
         + ", ".join(f"{e} {_fmt(r, 2)}" for e, r in fr.residual_per_exercise.items()),
         f"- Angle from prior R: {_fmt(fr.angle_from_prior_deg, 1)} deg",
         f"- Unconstrained fit: det {fr.unconstrained['det']:+.3f}, residual {_fmt(fr.unconstrained['residual_rms_g'])} g"

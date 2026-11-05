@@ -6,7 +6,7 @@
 ## Now
 - **Current phase:** Phase 3: calibration + domain shift (Phases 0–2 complete)
 - **Branch:** work on `feature/*` off `dev`
-- **Next step:** Phase 5 MVP code complete (V1–V4 merged). Owner: on-device check of V4 (phone + PC on the same Wi-Fi; steps in `apps/android/mobile/README.md`), and push `dev` so `services-ci` runs for the first time. Sunday 2026-10-25: U2 session 1 (`docs/U2_CHECKLIST.md`); orchestrator then runs `python -m workout_ml.watch.evaluate --in-sample watch-fit-v1`.
+- **Next step:** Owner redoes U2 session 1 with the live preview (phone shows watch rate, gaps, saturation, live acc/gyro) and loads entered in lb via the new unit setting (stored as kg). The redo replaces `918aa36e` in `watch-fit-v1` (D-033); then re-run the in-sample evaluation. Live preview verified on device. Orchestrator next: OHP vs bench (decision tree step 2).
 
 ## Pending owner tasks
 - [ ] Confirm Android package id (default `dev.proprio`; spec uses `dev.proprio.wear` / `dev.proprio.mobile`)
@@ -102,6 +102,12 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-04: BUILD_JOURNAL rewritten for beginner ML readers (theory boxes, glossary).
+- 2026-10-27: Countdown set start merged (D-034); needs installing and an on-wrist check.
+- 2026-10-27: Live preview verified on device by the owner (watch + phone). Ready for the U2 session-1 redo.
+- 2026-10-27: Live sensor preview (watch → phone over the Data Layer, display-only, lease-gated) and a kg/lb weight-unit setting merged; phone APK installed, watch install pending. Owner will redo U2 session 1 (D-033).
+- 2026-10-26: Owner approved A–C; implemented and re-run in-sample (prior v1 now matches the fit, OHP→bench remains). Phone upload: `WAITING_TO_RETRY` state with the error, no retry cap, stale-state recovery, REPLACE instead of chaining behind backoff; Doze found holding jobs while the screen is off.
+- 2026-10-26: U2 session 1 recorded (73 min, 15 sets, 0 gaps), pulled over adb (app upload stuck), DVC-tracked as `watch-fit-v1`, in-sample evaluation + orchestrator review (D-030). Folder renamed to `E:\Projects\Proprio`; compose gained opt-in `PUBLIC_BIND`; phone reaches the stack over Tailscale.
 - 2026-10-25: V4 phone ↔ backend reviewed and merged (D-029). Phase 5 MVP code complete; on-device verification pending.
 - 2026-10-25: V3 compose + E2E + services CI reviewed and merged (D-028). V4 next.
 - 2026-10-23: V2 inference-svc reviewed and merged (D-027). V3 started.

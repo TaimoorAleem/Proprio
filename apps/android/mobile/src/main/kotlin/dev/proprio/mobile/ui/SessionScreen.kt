@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import dev.proprio.mobile.LivePreviewController
 import dev.proprio.mobile.SessionCoordinator
 import dev.proprio.mobile.SessionUiState
 import dev.proprio.mobile.SetConfig
@@ -49,23 +50,30 @@ class SessionActions(
     val discard: () -> Unit,
     val dismissMessage: () -> Unit,
     val refresh: () -> Unit,
+    val cancelCountdown: () -> Unit = {},
 )
 
 @Composable
-fun SessionScreen(coordinator: SessionCoordinator, modifier: Modifier = Modifier) {
+fun SessionScreen(coordinator: SessionCoordinator, modifier: Modifier = Modifier, live: LivePreviewController? = null) {
     val state by coordinator.state.collectAsState()
     val actions = remember(coordinator) {
         SessionActions(
             coordinator::startSession, coordinator::endSession, coordinator::startSet, coordinator::startOther,
             coordinator::stopSegment, coordinator::setConfig, coordinator::confirmReps, coordinator::dismissPrompt, coordinator::discardSegment,
-            coordinator::dismissMessage, coordinator::refreshConnection,
+            coordinator::dismissMessage, coordinator::refreshConnection, coordinator::cancelCountdown,
         )
     }
-    SessionContent(state, actions, modifier)
+    SessionContent(state, actions, modifier, live)
 }
 
 @Composable
-fun SessionContent(state: SessionUiState, actions: SessionActions, modifier: Modifier = Modifier) {
+fun SessionContent(
+    state: SessionUiState,
+    actions: SessionActions,
+    modifier: Modifier = Modifier,
+    live: LivePreviewController? = null,
+    liveTickMs: Long = 40,
+) {
     val watch = state.watch
     val recording = watch?.state == WatchStatus.State.RECORDING
     val gym = recording && watch.sessionKind != SessionKind.CALIBRATION
@@ -97,8 +105,9 @@ fun SessionContent(state: SessionUiState, actions: SessionActions, modifier: Mod
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start calibration") }
         } else {
+            live?.let { LiveSection(it, tickMs = liveTickMs, countdownMs = state.countdownMs) }
             if (gym) {
-                SetConfigCard(state.config, actions.setConfig, enabled = state.open == null)
+                SetConfigCard(state.config, actions.setConfig, enabled = state.open == null && state.countdownMs == null)
                 SetButtons(state, actions)
             } else {
                 Text("Calibration: follow the prompts on the watch.", style = MaterialTheme.typography.bodyLarge)
@@ -115,7 +124,7 @@ fun SessionContent(state: SessionUiState, actions: SessionActions, modifier: Mod
         RepPickerDialog(
             shortS = prompt.shortS,
             onDiscard = actions.discard,
-            title = listOfNotNull(prompt.exercise, prompt.loadKg?.let { "${formatKg(it)} kg" }).joinToString(" ")
+            title = listOfNotNull(prompt.exercise, prompt.loadKg?.let { LocalWeightUnit.current.display(it) }).joinToString(" ")
                 .ifEmpty { "Set finished" },
             onSave = actions.confirmReps,
             confirm = if (prompt.fromWatch) {
@@ -153,8 +162,10 @@ private fun StatusCard(state: SessionUiState, refresh: () -> Unit) {
                     Text("Recording ${formatElapsed(watch.elapsedS)}", Modifier.testTag("recording"))
                     Text("acc ${formatHz(watch.accRateHz)}  gyro ${formatHz(watch.gyrRateHz)}", Modifier.testTag("rates"))
                     val open = state.open
+                    val countdown = state.countdownMs
                     val openText = when {
                         watch.calibrationStep != null -> "Calibration step: ${watch.calibrationStep}"
+                        countdown != null -> "Starting in ${countdownSeconds(countdown)}"
                         open != null -> "Open segment: ${open.kind.name.lowercase()} #${open.segmentId}"
                         watch.openSegmentId != null -> "Open segment #${watch.openSegmentId}"
                         else -> "No open segment"
@@ -185,16 +196,15 @@ private fun SetConfigCard(config: SetConfig, update: ((SetConfig) -> SetConfig) 
                 }
             }
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { update { it.copy(loadKg = ((it.loadKg ?: 0.0) - 2.5).coerceAtLeast(0.0)) } }, enabled = enabled) { Text("-2.5") }
-                OutlinedTextField(
-                    value = config.loadKg?.let { formatKg(it) }.orEmpty(),
-                    onValueChange = { text -> update { it.copy(loadKg = text.replace(',', '.').toDoubleOrNull()) } },
-                    label = { Text("Load (kg)") },
-                    singleLine = true,
+                val unit = LocalWeightUnit.current
+                OutlinedButton(onClick = { update { it.copy(loadKg = unit.stepKg(it.loadKg, -1)) } }, enabled = enabled) { Text("-${unit.stepLabel}") }
+                LoadField(
+                    loadKg = config.loadKg,
+                    onChange = { kg -> update { it.copy(loadKg = kg) } },
                     enabled = enabled,
                     modifier = Modifier.weight(1f).testTag("load"),
                 )
-                OutlinedButton(onClick = { update { it.copy(loadKg = (it.loadKg ?: 0.0) + 2.5) } }, enabled = enabled) { Text("+2.5") }
+                OutlinedButton(onClick = { update { it.copy(loadKg = unit.stepKg(it.loadKg, 1)) } }, enabled = enabled) { Text("+${unit.stepLabel}") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CATEGORIES.forEach { c ->
@@ -214,10 +224,23 @@ private fun SetConfigCard(config: SetConfig, update: ((SetConfig) -> SetConfig) 
 @Composable
 private fun SetButtons(state: SessionUiState, actions: SessionActions) {
     val open = state.open
+    val countdown = state.countdownMs
+    if (countdown != null) {
+        Card(Modifier.fillMaxWidth().testTag("countdown_card")) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Starting in ${countdownSeconds(countdown)}", Modifier.testTag("countdown_text"), style = MaterialTheme.typography.headlineMedium)
+                Text("The set opens on the watch when the countdown ends.", style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = actions.cancelCountdown, modifier = Modifier.fillMaxWidth().testTag("cancel_countdown")) {
+                    Text("Cancel countdown")
+                }
+            }
+        }
+        return
+    }
     when (open?.kind) {
         null -> {
             Button(onClick = actions.startSet, modifier = Modifier.fillMaxWidth().height(96.dp)) {
-                Text("Start set", style = MaterialTheme.typography.headlineSmall)
+                Text(startSetLabel(state.startSetCountdownMs), style = MaterialTheme.typography.headlineSmall)
             }
             OutlinedButton(onClick = actions.startOther, modifier = Modifier.fillMaxWidth()) { Text("Start other") }
         }
@@ -245,13 +268,7 @@ private fun ExerciseConfirmSection(cfg: SetConfig, confirmed: Boolean, onChange:
                 )
             }
         }
-        OutlinedTextField(
-            value = cfg.loadKg?.let { formatKg(it) }.orEmpty(),
-            onValueChange = { text -> onChange(cfg.copy(loadKg = text.replace(',', '.').toDoubleOrNull())) },
-            label = { Text("Load (kg)") },
-            singleLine = true,
-            modifier = Modifier.testTag("prompt_load"),
-        )
+        LoadField(loadKg = cfg.loadKg, onChange = { onChange(cfg.copy(loadKg = it)) }, modifier = Modifier.testTag("prompt_load"))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             CATEGORIES.forEach { c ->
                 FilterChip(
@@ -265,7 +282,7 @@ private fun ExerciseConfirmSection(cfg: SetConfig, confirmed: Boolean, onChange:
         FilterChip(
             selected = confirmed,
             onClick = onConfirm,
-            label = { Text("Confirm: ${cfg.exercise}, ${cfg.loadKg?.let { formatKg(it) + " kg" } ?: "no load"}, ${cfg.category}") },
+            label = { Text("Confirm: ${cfg.exercise}, ${cfg.loadKg?.let { LocalWeightUnit.current.display(it) } ?: "no load"}, ${cfg.category}") },
             modifier = Modifier.testTag("confirm_exercise"),
         )
     }
@@ -358,6 +375,12 @@ private fun ShortOtherDialog(shortS: Double, onDiscard: () -> Unit, onKeep: () -
         dismissButton = { TextButton(onClick = onKeep, modifier = Modifier.testTag("keep_segment")) { Text("Keep") } },
     )
 }
+
+/** Whole seconds shown for a remaining time: 5 .. 1. */
+internal fun countdownSeconds(remainingMs: Long): Int = ((remainingMs + 999) / 1000).toInt()
+
+internal fun startSetLabel(countdownMs: Long): String =
+    if (countdownMs <= 0L) "Start set" else "Start set in ${countdownSeconds(countdownMs)} s"
 
 internal fun formatElapsed(s: Double?): String {
     val total = Math.round(s ?: 0.0).toInt()

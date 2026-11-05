@@ -1,5 +1,6 @@
 package dev.proprio.mobile.data
 
+import dev.proprio.protocol.LiveBatch
 import dev.proprio.protocol.MarkKind
 import dev.proprio.protocol.SegmentEvent
 import dev.proprio.protocol.SessionAck
@@ -32,6 +33,15 @@ interface WatchLink {
     /** Session zips received over the channel. */
     val incomingZips: Flow<IncomingZip>
 
+    /** Live preview batches from the watch (display-only; dropped when nobody collects fast enough). */
+    val liveBatches: Flow<LiveBatch>
+
+    /** Starts or renews the watch's live-preview lease. Returns false when no watch is reachable. */
+    suspend fun liveSubscribe(leaseMs: Long): Boolean
+
+    /** Ends the lease early (the live view was hidden). */
+    suspend fun liveUnsubscribe(): Boolean
+
     /** Re-checks reachable nodes. */
     suspend fun refresh()
 
@@ -44,8 +54,12 @@ interface WatchLink {
     /** Each command returns false when no watch is reachable or the send failed. */
     suspend fun startSession(kind: SessionKind, participantId: String?): Boolean
     suspend fun endSession(): Boolean
-    suspend fun startSegment(kind: MarkKind): Boolean
+    /** [countdownMs] > 0: the watch counts down first and opens the segment when it ends (0 = immediately). */
+    suspend fun startSegment(kind: MarkKind, countdownMs: Long = 0): Boolean
     suspend fun stopSegment(): Boolean
+
+    /** Cancels a start countdown running on the watch. */
+    suspend fun cancelCountdown(): Boolean
 
     suspend fun sendAck(ack: SessionAck): Boolean
 }
@@ -59,11 +73,28 @@ class FakeWatchLink(private val sessionIdFactory: () -> String = { "00000000-000
     private val _status = MutableStateFlow<WatchStatus?>(WatchStatus(WatchStatus.State.IDLE))
     private val _events = MutableSharedFlow<SegmentEvent>(extraBufferCapacity = 64)
     private val _zips = MutableSharedFlow<IncomingZip>(extraBufferCapacity = 16)
+    private val _live = MutableSharedFlow<LiveBatch>(extraBufferCapacity = 64)
 
     override val connected: StateFlow<Boolean> = _connected.asStateFlow()
     override val status: StateFlow<WatchStatus?> = _status.asStateFlow()
     override val segmentEvents: Flow<SegmentEvent> = _events
     override val incomingZips: Flow<IncomingZip> = _zips
+    override val liveBatches: Flow<LiveBatch> = _live
+
+    /** Lease commands received, e.g. "live/subscribe:10000" or "live/unsubscribe". */
+    val liveCommands = mutableListOf<String>()
+
+    suspend fun emitLive(batch: LiveBatch) = _live.emit(batch)
+
+    override suspend fun liveSubscribe(leaseMs: Long): Boolean {
+        liveCommands += "live/subscribe:$leaseMs"
+        return _connected.value
+    }
+
+    override suspend fun liveUnsubscribe(): Boolean {
+        liveCommands += "live/unsubscribe"
+        return _connected.value
+    }
 
     /** Commands received, in order, as human-readable strings (e.g. "segment/start:SET"). */
     val commands = mutableListOf<String>()
@@ -115,10 +146,43 @@ class FakeWatchLink(private val sessionIdFactory: () -> String = { "00000000-000
         return true
     }
 
-    override suspend fun startSegment(kind: MarkKind): Boolean {
-        commands += "segment/start:$kind"
+    private var pendingCountdown: MarkKind? = null
+
+    override suspend fun startSegment(kind: MarkKind, countdownMs: Long): Boolean {
+        commands += if (countdownMs > 0) "segment/start:$kind@$countdownMs" else "segment/start:$kind"
         val sid = sessionId
-        if (!_connected.value || sid == null || openSegment != null) return false
+        if (!_connected.value || sid == null || openSegment != null || pendingCountdown != null) return false
+        if (countdownMs > 0) {
+            // like the watch: no segment yet, the status reports the countdown; [finishCountdown] ends it
+            pendingCountdown = kind
+            _status.value = _status.value?.copy(countdownEndsInMs = countdownMs)
+            return true
+        }
+        return openNow(sid, kind)
+    }
+
+    /** Test helper: the watch's countdown reached zero, so the segment opens (source phone) and the status clears. */
+    suspend fun finishCountdown() {
+        val kind = pendingCountdown ?: return
+        pendingCountdown = null
+        _status.value = _status.value?.copy(countdownEndsInMs = null)
+        openNow(sessionId ?: return, kind)
+    }
+
+    /** Test helper: the countdown display moves on (a new status from the watch). */
+    fun tickCountdown(remainingMs: Long) {
+        if (pendingCountdown != null) _status.value = _status.value?.copy(countdownEndsInMs = remainingMs)
+    }
+
+    override suspend fun cancelCountdown(): Boolean {
+        commands += "segment/cancel"
+        if (!_connected.value) return false
+        pendingCountdown = null
+        _status.value = _status.value?.copy(countdownEndsInMs = null)
+        return true
+    }
+
+    private suspend fun openNow(sid: String, kind: MarkKind): Boolean {
         val id = nextSegmentId++
         openSegment = id to kind
         _status.value = _status.value?.copy(openSegmentId = id)

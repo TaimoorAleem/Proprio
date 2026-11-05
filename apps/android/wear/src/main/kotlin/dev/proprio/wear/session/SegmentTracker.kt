@@ -33,12 +33,12 @@ class SegmentTracker(
     var open: OpenSegment? = null
         private set
 
-    fun start(kind: MarkKind?, source: SegmentSource, step: String? = null): StartResult {
+    fun start(kind: MarkKind?, source: SegmentSource, step: String? = null, atNs: Long? = null): StartResult {
         val closed = open?.let { prev ->
             log("segment ${prev.id} still open when starting a new one; auto-closing it")
             close()
         }
-        val seg = OpenSegment(nextId++, kind, source, step, nowNs())
+        val seg = OpenSegment(nextId++, kind, source, step, atNs ?: nowNs())
         open = seg
         return StartResult(closed, seg)
     }

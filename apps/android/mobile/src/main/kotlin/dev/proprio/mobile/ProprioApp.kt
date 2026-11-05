@@ -8,11 +8,11 @@ import com.google.android.gms.wearable.WearableListenerService
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import dev.proprio.backend.AnalysisRepository
-import dev.proprio.backend.AuthState
 import dev.proprio.backend.BackendService
 import dev.proprio.backend.FileUploadStateStore
 import dev.proprio.backend.HistoryRepository
 import dev.proprio.backend.UploadCore
+import dev.proprio.backend.UploadRecovery
 import dev.proprio.mobile.data.CoreUploadRunner
 import dev.proprio.mobile.data.ExportBuilder
 import dev.proprio.mobile.data.FileSettingsStore
@@ -53,30 +53,39 @@ class AppContainer(context: Context) {
     )
     val uploadStates = FileUploadStateStore { store.dir(it) }
     private val uploadCore = UploadCore({ backend.client() }, uploadStates, StoreSessionFiles(store))
-    val uploadRunner = CoreUploadRunner(uploadCore, uploadStates)
+    val uploadRunner = CoreUploadRunner(uploadCore)
     val analysis = AnalysisRepository({ backend.client() }, uploadStates)
     val history = HistoryRepository({ backend.client() })
     val scheduler: UploadScheduler by lazy { WorkUploadScheduler(WorkManager.getInstance(context)) }
 
     /** Queues the upload job for a received session; does nothing while signed out (sign-in queues everything). */
     fun queueUpload(sessionId: String) {
-        if (backend.auth.signedIn && store.hasZip(sessionId)) scheduler.enqueue(sessionId)
+        // WorkManager lookups block briefly, so keep them off the caller's (possibly main) thread.
+        scope.launch { if (backend.auth.signedIn && store.hasZip(sessionId)) scheduler.enqueue(sessionId) }
     }
 
-    /** Manual upload from the session detail. */
+    /** Manual upload from the session detail; works from any state, including a stuck "uploading". */
     fun uploadNow(sessionId: String) {
-        uploadStates.update(sessionId) { it.copy(attempts = 0, error = null) }
-        queueUpload(sessionId)
+        scope.launch { if (store.hasZip(sessionId)) UploadRecovery.uploadNow(sessionId, uploadStates, scheduler) }
     }
 
-    private fun queueAll() = store.list().forEach { queueUpload(it.summary.sessionId) }
+    /** App start / sign-in: repair states a killed worker left behind, then restart every waiting job. */
+    private fun recoverAll() {
+        val ids = store.list().map { it.summary.sessionId }.filter { store.hasZip(it) }
+        if (backend.auth.signedIn) {
+            UploadRecovery.recover(ids, uploadStates, scheduler)
+        } else {
+            UploadRecovery.markStale(ids, uploadStates, scheduler)
+        }
+    }
 
     val coordinator = SessionCoordinator(scope, link, store, importer, settings, onSessionChanged = ::queueUpload)
+    val live = LivePreviewController(scope, link)
 
     init {
         // Signing in (and every app start while signed in) re-queues sessions that are not fully uploaded;
         // finished ones cost no network call.
-        scope.launch { backend.auth.state.collect { if (it is AuthState.SignedIn) queueAll() } }
+        scope.launch { backend.auth.state.collect { recoverAll() } }
     }
 
     companion object {
@@ -99,6 +108,10 @@ class PhoneListenerService : WearableListenerService() {
     override fun onMessageReceived(event: MessageEvent) {
         if (!event.path.startsWith("/proprio/")) return
         val c = container
+        if (event.path == dev.proprio.protocol.DataLayer.PATH_LIVE_SAMPLES) {
+            c.link.onLiveSamples(event.data) // synchronous, keeps arrival order
+            return
+        }
         c.scope.launch { c.link.onMessage(event.path, event.data) }
     }
 

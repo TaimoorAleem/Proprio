@@ -10,10 +10,12 @@ import dev.proprio.mobile.data.UserSettings
 import dev.proprio.mobile.domain.LabelEditor
 import dev.proprio.mobile.domain.PlotData
 import dev.proprio.mobile.domain.SegmentEdit
+import dev.proprio.mobile.domain.WeightUnit
 import dev.proprio.protocol.Labels
 import dev.proprio.protocol.RecordedSession
 import dev.proprio.protocol.ResolvedSegment
 import dev.proprio.protocol.SegmentKind
+import dev.proprio.protocol.SegmentStartCommand
 import dev.proprio.protocol.SegmentResolver
 import dev.proprio.protocol.SessionKind
 import java.io.File
@@ -33,6 +35,10 @@ import kotlinx.coroutines.withContext
 
 class SettingsViewModel(private val store: SettingsStore) : ViewModel() {
     val settings: StateFlow<UserSettings> = store.settings
+
+    fun setWeightUnit(unit: WeightUnit) = store.update { it.copy(weightUnit = unit) }
+
+    fun setCountdown(ms: Long) = store.update { it.copy(countdownMs = SegmentStartCommand.clampCountdown(ms)) }
 
     fun saveServerUrl(url: String) = store.update { it.copy(serverUrl = url.trim()) }
 

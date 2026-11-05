@@ -126,10 +126,27 @@ File name: `proprio-session-<session_id>.zip`. Contents:
 - A watch tap starts or stops a segment. A phone command does the same, via `MessageClient` paths:
   - `/proprio/v1/session/start`
   - `/proprio/v1/session/end`
-  - `/proprio/v1/segment/start` (payload: JSON `{kind}`)
+  - `/proprio/v1/segment/start` (payload: JSON `{kind, countdown_ms?}`)
   - `/proprio/v1/segment/stop`
+  - `/proprio/v1/segment/cancel` (empty payload; cancels a running start countdown)
 - The watch assigns `segment_id`s, monotonically increasing per session.
-- Haptic: a short buzz on segment start, a double buzz on stop.
+
+**Hands-free set start (countdown)**
+- `segment/start` takes an optional `countdown_ms` (default 0 = open immediately, the old behaviour; absent in older senders). With `countdown_ms > 0` the watch runs the countdown itself and **the segment starts when the countdown ends**: `t_start_ns` is that moment on the watch sensor clock, never the time of the tap or command. The phone only sends the command; it does not time anything, so a phone that disconnects mid-countdown does not affect the set.
+- `WatchStatus.countdown_ends_in_ms` (optional) carries the milliseconds left, measured when the status is sent (no clock sync needed). The watch sends a status at the start and on each second; the state stays `recording` and no segment is open until the countdown ends. The phone shows "Starting in N" (session screen and the live preview's segment chip) and can cancel.
+- Rules: a start while a countdown runs is ignored; a countdown only starts from rest (no open segment); ending the session cancels it silently and no segment is opened; `cancel` (phone command or a watch tap) ends it without a segment. A watch tap within the 1 s tap debounce of the start tap is treated as an accidental double press and does not cancel. Values are clamped to 0..30 s; the phone offers 0 / 3 / 5 / 10 s (default 5, setting stored on the phone). The watch remembers the last value the phone sent for sets started on the watch (default 5 s). `other` segments never count down.
+- Haptics: a short tick each second (including the first), one long buzz when the set opens, a short double buzz on cancel; none for 0 s. Stop stays immediate with the existing double buzz.
+
+**Live sensor preview (display only, not recorded)**
+- The phone shows the incoming accelerometer and gyroscope data as live graphs plus recording-health indicators, so each set can be checked while it is recorded. It is a read-only tap on the events `SensorRecorder` already captured (`SampleTap`, called after the recorder's own queue offer, inside a try/catch). It never touches the write path (`acc.csv`, `gyr.csv`, timestamps, segments), never back-pressures the recorder, and is never stored, uploaded or part of Raw Format v1. A test proves the recorded files are byte-identical with the preview on or off.
+- Paths (contract version stays `v1`; existing paths and payloads are unchanged):
+  - phone -> watch `/proprio/v1/live/subscribe`: JSON `LiveSubscribe{leaseMs}` (default 10 000, clamped 1 000..30 000). The phone sends it when the live view is visible and renews every 4 s.
+  - phone -> watch `/proprio/v1/live/unsubscribe` (empty payload) when the view is hidden.
+  - watch -> phone `/proprio/v1/live/samples`: binary `LiveBatch`, see `LiveCodec` in `:protocol`.
+- **Lease:** the watch streams only while a session records AND a lease is valid. A renewal replaces the expiry. The lease ends with the session, on unsubscribe, or on expiry, so a forgotten phone screen stops costing battery within one lease period (10 s).
+- **Batch:** every 200 ms, all samples captured in that window at full rate, in native units (m/s^2, rad/s) with watch elapsed-time offsets (us since session start). Header: version, batch sequence number, session id, open segment id/kind, anti-freeze strategy name, and whole-session health: samples written per sensor, measured rates, count of inter-sample gaps > 100 ms, count of acc samples with any |axis| >= 7.8 g, events dropped by the recorder queue, writer error flag.
+- **Buffering:** a fixed 2048-sample single-producer/single-consumer ring (about 20 s). A full ring drops preview samples and counts them. A batch whose send fails or takes more than 2 s is dropped; the next batch carries a higher sequence number, which is how the phone tells "preview lost over Bluetooth" (harmless) from a real recording gap reported by the watch counters.
+- Haptic: a short buzz on segment start, a double buzz on stop (a countdown start uses tick / long buzz / double buzz on cancel, see "Hands-free set start").
 
 **Calibration mode**
 - A guided sequence with on-screen instructions and haptic cues. Each step is an automatic segment with `source=auto` and `step=<id>`:
@@ -147,7 +164,8 @@ File name: `proprio-session-<session_id>.zip`. Contents:
 ## 6. Phone app (`:mobile`)
 **Session screen**
 - Start or end a session (sends commands to the watch).
-- Pick the next set's exercise, load (kg) and category (heavy/medium).
+- Pick the next set's exercise, load (kg or lb, Settings) and category (heavy/medium). Loads are always stored in kg in `labels.json`.
+- While recording, a **Live** panel shows two stacked charts (acceleration in g, angular rate in deg/s, rolling 10 s) and a health row; it can be opened full screen. Display only, see section 5.
 - Big start-set and stop-set buttons.
 - After stop, a **rep-count picker**, prefilled with nothing in Phase 2, plus optional RPE.
 - "Other" start/stop button.

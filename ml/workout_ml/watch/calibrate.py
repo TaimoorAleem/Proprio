@@ -28,9 +28,12 @@ from workout_ml.watch.datasets import dataset_paths, dataset_session_ids
 
 logger = logging.getLogger(__name__)
 
-PRIOR_PROFILE_ID = "galaxy-watch-prior-v0"
+PRIOR_PROFILE_ID = "galaxy-watch-prior-v1"
 FITTED_PROFILE_ID = "galaxy-watch5pro-fit-v1"
-RESIDUAL_GATE_G = 0.15
+# Kabsch gate: residual must be within this factor of MetaMotion's own between-participant
+# spread of per-exercise gravity vectors (a fit cannot be expected to beat the label noise).
+RESIDUAL_SPREAD_FACTOR = 1.5
+NON_LIFT_LABELS = ("rest", "other")
 GYRO_R_GATE = 0.8
 LEVER_WARN_G = 0.15  # RMS perpendicular component of the gravity set about its weakest axis
 GYR_COLS = ["gyr_x", "gyr_y", "gyr_z"]
@@ -55,6 +58,8 @@ class RotationFit:
     gyro_variance: dict = field(default_factory=dict)
     warnings: list = field(default_factory=list)
     flags: dict = field(default_factory=dict)
+    mm_spread_g: float | None = None
+    residual_threshold_g: float | None = None
 
     def summary(self) -> dict:
         """JSON-serialisable summary (for metrics files and MLflow)."""
@@ -73,7 +78,11 @@ class RotationFit:
             "gyro_profile_r": self.gyro_profile_r,
             "warnings": list(self.warnings),
             "flags": dict(self.flags),
-            "residual_gate_pass": bool(self.residual_rms_g < RESIDUAL_GATE_G),
+            "mm_spread_g": self.mm_spread_g,
+            "residual_threshold_g": self.residual_threshold_g,
+            "residual_gate_pass": residual_within_threshold(
+                self.residual_rms_g, self.residual_threshold_g
+            ),
             "gyro_gate_pass": None
             if self.gyro_profile_r is None
             else bool(self.gyro_profile_r >= GYRO_R_GATE),
@@ -95,6 +104,41 @@ def kabsch(A, B, w=None):
     d = np.sign(np.linalg.det(R_free)) or 1.0
     R = Vt.T @ np.diag([1.0, 1.0, d]) @ U.T
     return R, R_free, S
+
+
+def lift_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Lift data only: ``set``-kind segments (when ``kind`` exists), never rest/other labels."""
+    if "kind" in df.columns:
+        df = df[df["kind"] == "set"]
+    return df[~df["label"].isin(NON_LIFT_LABELS)]
+
+
+def between_participant_spread(mm_df: pd.DataFrame) -> float:
+    """MetaMotion between-participant spread of per-exercise gravity (g).
+
+    RMS over (participant, lift exercise) pairs of the norm of (participant's mean gravity
+    vector for that exercise - pooled mean for that exercise); ``rest`` excluded. Pooled mean =
+    mean over all bins of the exercise. Needs a ``participant`` column.
+    """
+    df = mm_df[~mm_df["label"].isin(NON_LIFT_LABELS)]
+    sq = []
+    for _, g in df.groupby("label"):
+        pooled = g[ACC_COLS].to_numpy().mean(axis=0)
+        for _, gp in g.groupby("participant"):
+            sq.append(float(np.sum((gp[ACC_COLS].to_numpy().mean(axis=0) - pooled) ** 2)))
+    if not sq:
+        raise ValueError("no lift data to compute the between-participant spread")
+    return float(np.sqrt(np.mean(sq)))
+
+
+def residual_threshold(spread_g: float) -> float:
+    return RESIDUAL_SPREAD_FACTOR * spread_g
+
+
+def residual_within_threshold(residual_g: float, threshold_g: float | None) -> bool | None:
+    if threshold_g is None:
+        return None
+    return bool(residual_g <= threshold_g)
 
 
 def _residuals(R, A, B):
@@ -130,13 +174,19 @@ def _gyro_variances(df: pd.DataFrame, labels, R=None) -> np.ndarray:
 def fit_rotation(mm_df: pd.DataFrame, watch_df: pd.DataFrame, prior_R=None) -> RotationFit:
     """Fit R from MetaMotion CSF data (``mm_df``) and watch data converted with R = I.
 
-    Both frames need ``label``, ``set`` and the six sensor columns. Only ``set``-kind lifts and
-    ``rest`` segments of the watch side are used (``other`` is skipped, it has no MM counterpart).
+    Both frames need ``label``, ``set`` and the six sensor columns. LIFTS ONLY: the watch side
+    uses ``set``-kind segments, the MetaMotion side lift labels; ``rest`` and ``other`` are
+    excluded on both sides (rest gravity depends on how the arm hangs, not on the sensor frame).
+    If ``mm_df`` has a ``participant`` column the relative residual gate is evaluated too.
     """
     if prior_R is None:
         prior_R = load_profile(PRIOR_PROFILE_ID).rotation
-    if "kind" in watch_df.columns:
-        watch_df = watch_df[watch_df["kind"].isin(["set", "rest"])]
+    watch_df = lift_frame(watch_df)
+    spread = thr = None
+    if "participant" in mm_df.columns:
+        spread = between_participant_spread(mm_df)
+        thr = residual_threshold(spread)
+    mm_df = mm_df[~mm_df["label"].isin(NON_LIFT_LABELS)]
     m_all, _, _ = exercise_vectors(mm_df)
     w_all, _, w_sets = exercise_vectors(watch_df)
     common = sorted(set(m_all) & set(w_all))
@@ -173,8 +223,11 @@ def fit_rotation(mm_df: pd.DataFrame, watch_df: pd.DataFrame, prior_R=None) -> R
             f"poorly conditioned: gravity directions are near-collinear (weakest-axis lever "
             f"{lever_min:.3f} g < {LEVER_WARN_G} g); R is poorly determined about that axis"
         )
-    if rms >= RESIDUAL_GATE_G:
-        warnings.append(f"Kabsch residual {rms:.3f} g >= {RESIDUAL_GATE_G} g: left-wrist suspect")
+    if thr is not None and rms > thr:
+        warnings.append(
+            f"Kabsch residual {rms:.3f} g > {thr:.3f} g ({RESIDUAL_SPREAD_FACTOR} x MetaMotion "
+            f"between-participant spread {spread:.3f} g): left-wrist suspect"
+        )
 
     angle = float(
         np.degrees((Rotation.from_matrix(prior_R).inv() * Rotation.from_matrix(R)).magnitude())
@@ -209,6 +262,8 @@ def fit_rotation(mm_df: pd.DataFrame, watch_df: pd.DataFrame, prior_R=None) -> R
         gyro_variance=gyro_var,
         warnings=warnings,
         flags=flags,
+        mm_spread_g=spread,
+        residual_threshold_g=thr,
     )
 
 

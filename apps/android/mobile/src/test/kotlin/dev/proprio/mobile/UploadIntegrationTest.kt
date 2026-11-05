@@ -58,7 +58,7 @@ class UploadIntegrationTest {
         val changed = mutableListOf<String>()
         val coordinator = SessionCoordinator(
             scope, link, store, SessionImporter(store),
-            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true)),
+            MemorySettingsStore(UserSettings("P01", true, "2026-01-01T00:00:00Z", true, countdownMs = 0)),
             io = Dispatchers.Unconfined, onSessionChanged = { changed += it },
         )
         coordinator.startSession(dev.proprio.protocol.SessionKind.GYM)

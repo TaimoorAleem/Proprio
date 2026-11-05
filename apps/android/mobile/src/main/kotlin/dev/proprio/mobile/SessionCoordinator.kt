@@ -63,7 +63,12 @@ data class SessionUiState(
     val open: OpenSegment? = null,
     val repPrompt: RepPrompt? = null,
     val message: String? = null,
-)
+    /** The configured "Start set" countdown (0 = immediate), for the button label. */
+    val startSetCountdownMs: Long = 0,
+) {
+    /** Milliseconds left of a start countdown running on the watch (from its last status), else null. */
+    val countdownMs: Long? get() = watch?.countdownEndsInMs?.takeIf { watch.state == WatchStatus.State.RECORDING }
+}
 
 /**
  * App-scoped owner of the labeling flow. It lives for the whole process (not a screen) because watch events
@@ -98,12 +103,12 @@ class SessionCoordinator(
     @Volatile private var configAtPress: SetConfig? = null
 
     val state: StateFlow<SessionUiState> = combine(
-        link.connected, link.status, config, open, combine(prompt, message) { p, m -> p to m },
+        link.connected, link.status, config, open, combine(prompt, message, settings.settings) { p, m, s -> Triple(p, m, s) },
     ) { connected, watch, cfg, o, pm ->
         SessionUiState(
             connected, watch, cfg,
             o.takeIf { watch?.state == WatchStatus.State.RECORDING },
-            pm.first, pm.second,
+            pm.first, pm.second, pm.third.countdownMs,
         )
     }.stateIn(scope, SharingStarted.Eagerly, SessionUiState())
 
@@ -146,7 +151,14 @@ class SessionCoordinator(
 
     fun startSet() {
         configAtPress = config.value
-        command("Could not start the set: watch not reachable or no session running.") { link.startSegment(MarkKind.SET) }
+        val countdownMs = settings.settings.value.countdownMs
+        command("Could not start the set: watch not reachable or no session running.") { link.startSegment(MarkKind.SET, countdownMs) }
+    }
+
+    /** Cancels the start countdown running on the watch. */
+    fun cancelCountdown() {
+        configAtPress = null
+        command("Could not cancel: watch not reachable.") { link.cancelCountdown() }
     }
 
     fun startOther() = command("Could not start: watch not reachable or no session running.") {

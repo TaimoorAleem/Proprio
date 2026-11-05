@@ -1,0 +1,15 @@
+profile_id: galaxy-watch-prior-v1
+csf_version: 1
+device: {vendor: Samsung, model: null, platform: android}
+acc: {source_unit: "m/s^2", unit_scale: 0.10197162129779283}
+gyr: {source_unit: "rad/s", unit_scale: 57.29577951308232}
+# PRIOR, not yet validated on held-out data. Left wrist, buttons toward the hand: watch +x is
+# distal and maps to MetaMotion +y; watch +z (screen normal) maps to MetaMotion +z.
+# Origin: axis-aligned rounding of the session-1 lifts-only Kabsch fit (U2S1) combined with the
+# owner's confirmed wear description. v0 had the roll about the forearm axis wrong (180 deg).
+# Still to be validated on session 2 (held-out). Superseded by a fitted profile once validated.
+rotation: [[0,-1,0],[1,0,0],[0,0,1]]
+rotation_status: prior
+emulation: {enabled: true, acc_hz: 12.5, gyr_hz: 25.0, anti_alias_order: 4, anti_alias_fraction: 0.8, max_gap_ms: 500}
+clip: {acc_g: null}
+calibration: {date: null, session: null, residual_g: null, gyro_profile_r: null}

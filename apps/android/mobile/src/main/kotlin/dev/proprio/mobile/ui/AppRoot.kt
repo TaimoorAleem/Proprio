@@ -47,6 +47,14 @@ private enum class Tab(val label: String) { SESSION("Session"), RECORDINGS("Reco
 
 @Composable
 fun AppRoot(container: AppContainer) {
+    val unitSettings by container.settings.settings.collectAsState()
+    androidx.compose.runtime.CompositionLocalProvider(LocalWeightUnit provides unitSettings.weightUnit) {
+        AppRootContent(container)
+    }
+}
+
+@Composable
+private fun AppRootContent(container: AppContainer) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val settingsVm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(container.settings) } })
@@ -72,7 +80,7 @@ fun AppRoot(container: AppContainer) {
     }
 
     if (!settings.firstRunComplete) {
-        SettingsScreen(settings, firstRun = true, onSave = saveSettings, modifier = Modifier)
+        SettingsScreen(settings, firstRun = true, onSave = saveSettings, modifier = Modifier, onWeightUnit = settingsVm::setWeightUnit)
         return
     }
 
@@ -135,7 +143,7 @@ fun AppRoot(container: AppContainer) {
     ) { padding ->
         val m = Modifier.padding(padding)
         when (tab) {
-            Tab.SESSION -> SessionScreen(container.coordinator, m)
+            Tab.SESSION -> SessionScreen(container.coordinator, m, container.live)
             Tab.RECORDINGS -> {
                 val vm: RecordingsViewModel = viewModel(factory = viewModelFactory { initializer { RecordingsViewModel(container.store) } })
                 val items by vm.items.collectAsState()
@@ -152,7 +160,7 @@ fun AppRoot(container: AppContainer) {
                 val state by vm.state.collectAsState()
                 HistoryScreen(state, onRefresh = vm::refresh, onSignIn = { showAuth = true }, modifier = m)
             }
-            Tab.SETTINGS -> SettingsScreen(settings, firstRun = false, onSave = saveSettings, modifier = m, extra = {
+            Tab.SETTINGS -> SettingsScreen(settings, firstRun = false, onSave = saveSettings, modifier = m, onWeightUnit = settingsVm::setWeightUnit, onCountdown = settingsVm::setCountdown, extra = {
                 AccountSection(
                     auth = authState,
                     serverUrl = settings.serverUrl,
