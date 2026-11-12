@@ -1,6 +1,6 @@
-# From a YouTube tutorial to a real product: introducing Proprio
+# Introducing Proprio
 
-*Building Proprio: an intelligent smartwatch-based fitness tracker. Part 0.*
+*An intelligent smartwatch-based fitness tracker.*
 
 ---
 
@@ -19,19 +19,18 @@ It is a complete beginner-to-intermediate machine learning project:
 - training and comparing several models;
 - writing a rep counter.
 
-I followed it on and off. The code lives in the same repository I am using for this series, and the early commits from 2024 are still there.
 
 When I got to the end, my best model scored **99.9% accuracy**.
 
 That number is the reason this series exists. A model that is right 999 times out of 1,000 sounds finished. But I wanted to wear it, on my own watch, in my own gym, and I had a nagging feeling that a number that good deserved a hard second look before I built anything on top of it.
 
-This post introduces the project: where the idea and the data come from, what the sensor actually measures, how the tutorial pipeline works, why I think it's worth turning into a real product, and the roadmap. It doesn't contain any results yet. Each later post follows the development as it happens.
+This post introduces the project: where the idea and the data come from, how the tutorial pipeline works, why I think it's worth turning into a real product, and the roadmap. It doesn't contain any results yet. Each later post follows the development as it happens.
 
 ## 2. The original work behind the tutorial
 
 The tutorial stands on several layers of earlier work, and I want to credit them properly.
 
-- **The dataset and the original study.** Ebbelaar collected the data himself, during real gym workouts, for a mini master project at the Vrije Universiteit Amsterdam [2]:
+- **The dataset and the original study.** Ebbelaar collected the data himself, during real gym workouts, for his masters assignment at the Vrije Universiteit Amsterdam [2]:
   - **Participants:** five people (himself included), wearing a **MetaMotion** wristband sensor from MbientLab [4].
   - **Exercises:** the five lifts from the *Starting Strength* program.
   - **Sets:** heavy sets of about 5 reps and medium sets of about 10.
@@ -48,123 +47,67 @@ The tutorial stands on several layers of earlier work, and I want to credit them
 
 So the honest starting point is this: a thoughtful student project, a clear and well-made tutorial built from it, and my own implementation of that tutorial reporting 99.9%.
 
-## 3. What a wrist sensor actually measures
-
-Everything in this series depends on understanding the raw signal, so this section goes slowly.
-
-The MetaMotion band, and every smartwatch, contains a tiny chip called an **IMU** (inertial measurement unit). Two of its sensors matter here.
-
-### The accelerometer
-
-An accelerometer measures how hard the device is being pushed along three directions, called its **x, y and z axes**.
-
-> **The idea in plain words: gravity counts as a push.**
->
-> Picture a small ball resting on a tray. Tilt the tray and the ball rolls; jerk the tray forward and the ball lags behind. An accelerometer "feels" both kinds of effect, so it can't tell tilting apart from accelerating.
->
-> The surprising part: a device lying perfectly still on a table does **not** read zero. It reads about **1 g** pointing up, because the table is pushing it up against gravity. (1 g is the strength of Earth's gravity, 9.80665 m/s².)
->
-> So even when you aren't moving, the accelerometer tells you **which way is down, relative to the device**. That's enormously useful for exercise recognition. Your wrist points one way during a bench press (hand above the wrist, arm vertical) and another way during a deadlift (hand hanging below the wrist). Before the bar even moves, gravity has already given a clue.
-
-During a lift, the accelerometer reads gravity plus the push from your movement, mixed together. Separating the two is a recurring theme.
-
-### The gyroscope
-
-A gyroscope measures how fast the device is **rotating** around each axis: "you are turning at 40 degrees per second around your forearm". It knows nothing about gravity. If you hold still it reads roughly zero, whatever angle you're at.
-
-The two sensors complement each other. The accelerometer is good at "where is down" and at sharp pushes. The gyroscope is good at twists and turns.
-
-### Axes belong to the device, not the room
-
-The x, y and z directions are fixed to the sensor's case. Turn your wrist and the axes turn with it. Strap the band on slightly rotated and every reading changes, even though you lifted exactly the same way.
-
-This matters for two reasons:
-- **Documentation:** a manufacturer's documentation tells you how its axes are laid out, but not how the device sat on each person's wrist during data collection.
-- **Changing devices:** if you swap one device for another, the axes almost certainly won't line up.
-
-### Units are not universal
-
-| Device | Acceleration | Rotation |
-|---|---|---|
-| MetaMotion (the dataset) | **g** (multiples of gravity) | **degrees per second** |
-| An Android watch | **m/s²** (1 g = 9.80665 m/s²) | **radians per second** (1 rad ≈ 57.3°) |
-
-A model trained on degrees per second and fed radians per second would see every rotation as about 57 times too small. Nothing would crash. It would just be quietly, badly wrong. Bugs like that don't announce themselves, and avoiding them is a big part of this project.
-
-### Sampling rate
-
-A sensor doesn't record continuously. It takes snapshots, a fixed number per second. That number is called the **sampling rate**, measured in hertz (Hz).
-- **MetaMotion:** in this dataset, the accelerometer samples at **12.5 Hz** and the gyroscope at **25 Hz** [2].
-- **Watches:** a smartwatch picks its own rates, and phones and watches don't always deliver samples at perfectly even intervals.
-
-If you train on one rate and run on another, the features the model learned from can shift. A rolling average over "20 samples" means a different amount of time at a different rate.
-
-Units, axes and rates are the three things that must match between the data a model learned from and the data it sees later. On a single device, in a single study, they match automatically. The moment you change the device, nothing guarantees it.
-
-## 4. How the tutorial pipeline works
+## 3. How the original pipeline works
 
 Here is the whole pipeline from raw files to a predicted exercise:
 
+```mermaid
+flowchart TD
+    A["Raw CSV files<br/>one per sensor per set, labels in the file name"]
+    B["Merge and resample<br/>200 ms steps (5 per second)"]
+    C["Outlier handling<br/>IQR · Chauvenet's criterion · local outlier factor"]
+    D["Feature engineering<br/>low-pass filter · PCA · magnitude r = √(x² + y² + z²)<br/>rolling mean/std over ~4 s · Fourier features · k-means clusters"]
+    E["Five models<br/>neural network · random forest · k-nearest neighbours<br/>decision tree · naive Bayes"]
+    F(["Predicted exercise<br/>per 200 ms step"])
+    R1["Rep counter (no learning)<br/>smooth the signal heavily"]
+    R2["Count the peaks"]
+    R3(["Number of reps"])
+
+    A --> B --> C --> D --> E --> F
+    B --> R1 --> R2 --> R3
 ```
- raw CSV files (one per sensor per set; labels in the file name)
-        │
-        ▼
- merge + resample to 200 ms steps (5 per second)
-        │
-        ▼
- outlier handling (IQR · Chauvenet's criterion · local outlier factor)
-        │
-        ▼
- feature engineering
-   · low-pass filter (smooth away jitter)
-   · PCA (combine correlated signals)
-   · magnitude  r = √(x² + y² + z²)  (ignores device orientation)
-   · rolling mean / std over ~4 s windows
-   · frequency features (Fourier transform over ~4 s)
-   · cluster membership (k-means)
-        │
-        ▼
- models: neural network · random forest · k-nearest neighbours · decision tree · naive Bayes
-        │
-        ▼
- predicted exercise per 200 ms step        rep counter: smooth, then count peaks
-```
+
+*Figure 1. The tutorial pipeline, end to end. The rep counter works on the resampled data, separately from the models.*
+
 
 A few ideas in that picture are worth explaining now.
 
 - **Resampling.** The accelerometer and gyroscope tick at different rates. The tutorial puts them on a common clock by averaging everything that falls inside each 200 ms step. Each row of the table becomes one fifth of a second of data.
+
+![Acceleration over eight seconds of a bench press set: raw samples as dots, the 200 ms resampled series as a thin line, and the low-pass filtered series as a thick line](assets/post-00/fig05-resample-filter.png)
+*Figure 2. Resampling puts the sensors on a common 200 ms clock; a low-pass filter then smooths away jitter (1.3 Hz cutoff, the setting from the original report).*
+
 - **Features.** A single snapshot says very little: one reading could come from almost any exercise. A **feature** is a number computed to describe a short stretch of time, such as "the average y-acceleration over the last 4 seconds" or "how strongly the signal repeats every 2 seconds". Models learn from features rather than from raw snapshots.
 - **Windows.** Many features are computed over a **rolling window**: the last few seconds, recomputed every 200 ms. Neighbouring rows therefore share most of their data. The tutorial deals with this by keeping only every other row. I'll come back to overlapping windows in the next post.
 - **Models.** Five classic algorithms are compared, then tuned with a grid search (trying many settings and keeping the best).
 - **Rep counting.** The rep counter isn't learned at all. It smooths the signal heavily and counts the peaks, with the smoothing tuned per exercise. The "true" rep counts it is compared against come from the set type (heavy = 5, medium = 10), not from someone counting each rep.
 
-Everything in the pipeline is reasonable and standard for this kind of course project. Whether the final number means what it seems to mean is a separate question, and that's where the next post begins.
+![Two line charts of heavily smoothed acceleration magnitude for a heavy and a medium bench press set, with detected peaks numbered](assets/post-00/fig06-rep-peaks.png)
+*Figure 3. The original rep counter: smooth heavily, then count the peaks. Bench press, participant E. The expected counts come from the set type, not from counting by hand.*
 
-## 5. Why a notebook isn't a product
+
+Everything in the pipeline is reasonable and standard for this kind of course project. Whether the final number means what it seems to mean is a separate question, and that's where the next blog begins.
+
+## 4. Why a notebook isn't a product
 
 A tutorial is designed to teach. A product has to survive contact with real people. Between the two there is a long list of gaps:
 
-- **A different sensor.** Nobody buys a MetaMotion research band to lift weights. People wear smartwatches, with different units, rates, axes and fit on the wrist (section 3).
+- **A different sensor.** Nobody buys a MetaMotion research band to lift weights. People wear smartwatches, with different units, rates, axes and fit on the wrist. The next post explains what that means for the data.
 - **New people.** A product only matters for people the model has never seen. The original report already found that results fall when the test person is new [2].
 - **New conditions.** Different gyms, bars and grips; walking between sets; checking your phone mid-workout. All of this lands in the data.
-- **No app, no backend, no history.** A Python notebook doesn't record a workout, label it, store it, or show you anything.
 - **An unchecked number.** My 99.9% came out of one evaluation, run once. Before I trust it, I want to know exactly how the training and test data were separated, and whether anything about the test made it easier than real life.
 
 That last point is the first job. If the number doesn't hold up, everything built on top of it inherits the problem.
 
-## 6. Why it's worth building: the research
+## 5. Why it's worth building: the research
 
 Before investing months, I asked whether the world needs another workout tracker.
 
 ### The consumer space is crowded, and still frustrating
 
-Automatic exercise and rep tracking already ships, or is attempted, on the big platforms:
-- **Samsung Galaxy Watch:** recognises some gym exercises, and its community forums contain recurring complaints that rep counting is unreliable for lifts like squats and bench press [10].
-- **Garmin:** its strength mode has drawn criticism in reviews [11], and a 2023 study of four Garmin wrist devices found that none met the authors' validity criteria for counting reps [9].
-- **Dedicated apps:** some, such as Train Fitness (now Motra) on the Apple Watch, are built entirely around automatic tracking [13].
-- **WHOOP:** added automatic estimates of muscular load from wrist motion in early 2026 [12].
+Automatic exercise and rep tracking already ships, or is attempted, on major platforms such as Galaxy Wear and Apple Watch.
 
-So "recognise the exercise and count the reps" is not, on its own, a reason for Proprio to exist. It is the necessary foundation, and the competition shows it's still not solved well. But it isn't enough of a reason by itself.
+So "recognise the exercise and count the reps" is not, on its own, a reason for Proprio to exist. It is the necessary foundation though, and the competition shows it's still not solved well.
 
 ### The unsolved problem: did the prescribed exercise actually happen?
 
@@ -172,29 +115,35 @@ The more interesting gap is **unsupervised, prescribed strength work**: the exer
 
 - **Non-adherence is common.** A 2021 paper summarises earlier research: "patient non-adherence with rehabilitation programs is 50%-70%" [5].
 - **Self-reports overstate it.** In a 2018 study, people with knee pain kept an exercise diary while an accelerometer hidden in their ankle weight counted what they actually did. The diaries recorded a median of **220** exercises; the hidden sensor counted **176** [6]. People didn't lie badly, but the diary was consistently optimistic.
+
+![Bar chart: median exercises recorded, 220 in the diary vs 176 by the hidden accelerometer](assets/post-00/fig07-diary-vs-sensor.png)
+*Figure 4. Diaries overstate what people actually do. Data from Nicolson et al. (2018) [6]; the accelerometer was hidden in an ankle weight.*
+
 - **Clinicians lack tools.** A 2023 survey of 149 clinicians found that the most common barrier to measuring adherence was not having a tool to do it [7].
 - **The approach works in research.** Researchers in Toronto (Sunnybrook and the Holland Centre) showed that smartwatch inertial data could recognise shoulder physiotherapy exercises [14]. They then designed a study in which data labelled in the clinic is used to classify patients' home sessions [15]. Wrist accelerometers also appear as adherence measures in clinical trials [8].
 - **Wrists can measure more than rep counts.** In a 2023 study, a wrist-worn Apple Watch estimated mean barbell squat velocity about as well as sensors mounted on the bar [16]. There is early work on estimating effort, too, though only as a preprint so far [18]. Reviews of commercial training sensors also warn that validation is often weak [17], which is a good reason to measure carefully rather than trust marketing.
 
 That's the opening: research has shown the idea works, but there's no product a clinician can simply buy. The roadmap at the end of this post comes back to it.
 
-## 7. Meet Proprio
+## 6. Meet Proprio
 
 **Proprio** (short for *proprioception*, the body's sense of its own position and movement) is my attempt to turn the tutorial into something real:
 
-- **A Samsung Galaxy Watch** records the raw motion of a whole workout, worn on the left wrist.
-- **An Android phone app** lets you label sets, fix mistakes, and see your history.
-- **Backend services** store the raw recordings, convert them, recognise exercises, count reps, and send the results back to the phone.
+- **A Smartwatch** records the raw motion of a whole workout, worn on the left wrist.
+- **A mobile app** lets you label sets, fix mistakes, and see your history.
+- **Backend services** store the raw recordings, convert them, recognizes exercises, count reps, and send the results back to the phone.
 - **An AI coach** explains your training in plain language, grounded in your own recorded history rather than generic advice.
+
+I'm starting with a Galaxy Watch and an Android phone because that's the watch I have to test on. An Apple Watch and iOS mobile app comes after the Android product is done. Because the raw recordings are converted on the server, a new watch mostly needs a description of its sensor (units, axes, rates) and a calibration session, not a new model.
 
 Two principles run through all of it:
 
 1. **Keep the raw data.** The watch records exactly what its sensors measured, unconverted. Every conversion happens later, in one shared piece of code, so it can be fixed and re-run if it turns out to be wrong.
 2. **Measure before claiming.** Every accuracy number in this series will come from a test designed to resemble real use, with its limitations stated next to it.
 
-## 8. The roadmap: what I'm building now
+## 7. The roadmap
 
-These are the phases, in order. Each one will produce at least one post.
+These are the phases, in order. Each one will produce at least one post. Phases 6–9 are my answer to the question from section 5: what can a wrist-worn strength tracker do that the crowded market doesn't?
 
 | Phase | Goal, in plain words |
 |---|---|
@@ -204,45 +153,24 @@ These are the phases, in order. Each one will produce at least one post.
 | 3 | **Calibrate and test on real gym data.** Check the watch's units and axes physically, record real sessions, and judge the model against pass/fail rules written in advance. |
 | 4 | **Better models.** A small deep-learning model and a reworked rep counter, if the classic models fall short on the watch. |
 | 5 | **Services.** A backend that receives recordings from the phone, analyses them, and returns results reliably. |
-| 6 | **The coach.** A language model (IBM Granite) that answers questions about your training and cites where each answer came from. |
-| 7 | **Ship it.** Automated testing, a security review, and deployment to the cloud. |
-| 8 | **Personalisation.** Use each user's corrections to improve the model for that user. |
+| 6 | **Prescription adherence ledger.** On a web app, a physiotherapist, kinesiologist or coach prescribes exercises (sets, reps, rest, tempo, days per week) and records a short demo set of each on the client's watch. At home the client just starts and stops a session; the system detects the sets, matches each to a prescribed exercise (or "unknown"), and counts reps, rest and rep duration. Both sides see a weekly ledger of done vs prescribed. Any AI summary may only restate computed facts and must point to the sessions they came from. |
+| 7 | **Wrist velocity-loss feedback** (the riskiest feature). Estimate how much the lift slows down within a set, from the wrist alone, and buzz at a chosen point (for example a 20–25% drop), giving lifters some of what a dedicated bar sensor does. It must never claim to tell you how close you are to failure: velocity loss only roughly tracks that. |
+| 8 | **A verified session record for remote trainers.** Online coaching platforms show what clients *say* they did. Trainers see the verified record on the web app. This compares a watch-verified record of sets, rest and session length with the logged workout: "logged 4 sets, watch saw 2", or "rest averaged 45 s vs 2 min prescribed". |
+| 9 | **Tempo and time-under-tension compliance.** Split each rep into its lifting and lowering phases and compare them with a prescribed tempo, as used in tendon rehab and tempo training. After the session first, real-time buzzes later. |
+| 10 | **The coach.** A language model (IBM Granite) that answers questions about your training and cites where each answer came from. |
+| 11 | **Ship it.** Automated testing, a security review, and deployment to the cloud. |
+| 12 | **Personalisation.** Use each user's corrections to improve the model for that user. |
+| 13 | **Apple Watch and iPhone.** The same product on Apple hardware, once the Android version is done. |
 
-## 9. The roadmap: where it could go
+Phases 6 and 8 put Proprio close to healthcare. That brings rules on medical software and health data, in Canada [19] and in the US [20], and it's why they come after a foundation that has been shown to work.
 
-These are **ideas, not commitments**. They answer the question from section 6: what could a wrist-worn strength tracker do that the crowded market doesn't?
-
-- **A. Prescription adherence ledger.**
-  - **Prescription:** a physiotherapist, kinesiologist or coach prescribes exercises (sets, reps, rest, tempo, days per week) and records a short demo set of each on the client's watch.
-  - **At home:** the client just starts and stops a session. The system detects the sets, matches each one to a prescribed exercise (or "unknown"), and counts reps, rest and rep duration.
-  - **Result:** both sides see a weekly ledger of what was done against what was prescribed. Any AI summary may only restate computed facts, and must point to the sessions they came from.
-- **B. Wrist velocity-loss feedback** (the riskiest idea).
-  - **Idea:** estimate how much the lift slows down within a set, from the wrist alone, and buzz at a chosen point (for example a 20–25% drop).
-  - **Why:** it offers lifters some of what a dedicated bar sensor does.
-  - **What it must never claim:** to tell you how close you are to failure. Velocity loss only roughly tracks that.
-- **C. A verified session record for remote trainers.**
-  - **The gap:** online coaching platforms show what clients *say* they did.
-  - **Idea:** a watch-verified record of sets, rest and session length, compared with the logged workout. For example: "logged 4 sets, watch saw 2" or "rest averaged 45 s vs 2 min prescribed".
-- **D. Tempo and time-under-tension compliance.**
-  - **Idea:** split each rep into its lifting and lowering phases and compare them with a prescribed tempo, as used in tendon rehab and tempo training.
-  - **Order:** after the session first, real-time buzzes later.
-
-Ideas A and C would put Proprio close to healthcare. That brings rules on medical software and health data, in Canada [19] and in the US [20]. That's another reason they're ideas for later, built on a foundation that has to work first.
-
-## 10. Ground rules for this series
-
-- **Real numbers, including failures.** If something doesn't work, the post says so, with the evidence.
-- **Optimistic numbers are labelled.** If a result was measured on the same data used to tune the system, it is marked as optimistic.
-- **Every technology has a genuine job.** No tool is added just to say it was used. If something is a weak fit, I'll say that too.
-- **Posts follow development.** I don't know how this ends. Each post is written when its part of the work is done.
-
-## 11. What's next
+## 8. What's next
 
 The first job is the one from section 1. My model scored 99.9%. In the next post I take the tutorial code apart, make it reproducible, and ask a simple question:
 
 **If you give this model a person it has never seen, how often is it right?**
 
-## 12. References
+## 9. References
 
 1. Ebbelaar, D. *Full Machine Learning Project — Coding a Fitness Tracker with Python* (video series, 8 parts). https://youtube.com/playlist?list=PL-Y17yukoyy0sT2hoSQxn1TdV0J7-MX4K
 2. Ebbelaar, D. *Exploring the Possibilities of Context-Aware Applications for Strength Training.* Mini Master Project, Vrije Universiteit Amsterdam. (Linked from the tutorial's source material.)
