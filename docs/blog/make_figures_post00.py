@@ -22,7 +22,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 from workout_ml import config
 from workout_ml.data.preprocessor import DataLoader
 from workout_ml.features.DataTransformation import LowPassFilter
@@ -346,137 +345,6 @@ def fig03(sets, out):
     return f"{s.meta['stem'][:24]}, window {w[0]:.1f}-{w[1]:.1f} s"
 
 
-def box(
-    ax, x, y, w, h, text, fc="#f4f4f4", ec="#9a9a9a", fs=10, bold=False, left=False
-):
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y),
-            w,
-            h,
-            boxstyle="round,pad=0.0,rounding_size=0.12",
-            fc=fc,
-            ec=ec,
-            lw=1.2,
-        )
-    )
-    tx = x + 0.25 if left else x + w / 2
-    ax.text(
-        tx,
-        y + h / 2,
-        text,
-        ha="left" if left else "center",
-        va="center",
-        fontsize=fs,
-        color=INK,
-        fontweight="bold" if bold else "normal",
-        linespacing=1.45,
-    )
-
-
-def arrow(ax, p0, p1, color="#7a7a7a"):
-    ax.add_patch(
-        FancyArrowPatch(
-            p0,
-            p1,
-            arrowstyle="-|>",
-            mutation_scale=14,
-            lw=1.4,
-            color=color,
-            shrinkA=0,
-            shrinkB=0,
-        )
-    )
-
-
-def fig04(out):
-    fig, ax = plt.subplots(figsize=(12, 7.6))
-    ax.set_xlim(0, 12)
-    ax.set_ylim(0, 7.6)
-    ax.axis("off")
-    title(
-        fig,
-        "The tutorial pipeline, end to end",
-        "From raw sensor files to a predicted exercise and a rep count.",
-        top=0.985,
-    )
-    bw, bx = 6.2, 0.3
-    cx = bx + bw / 2
-    box(
-        ax,
-        bx,
-        6.45,
-        bw,
-        0.8,
-        "Raw CSV files\none per sensor per set, labels in the file name",
-        fc="#fff",
-    )
-    box(ax, bx, 5.35, bw, 0.8, "Merge and resample\nto 200 ms steps (5 per second)")
-    box(
-        ax,
-        bx,
-        4.25,
-        bw,
-        0.8,
-        "Outlier handling\nIQR, Chauvenet's criterion, local outlier factor",
-    )
-    feat = (
-        "Feature engineering\n"
-        "-  low-pass filter (smooth away jitter)\n"
-        "-  PCA (combine correlated signals)\n"
-        "-  magnitude r = sqrt(x² + y² + z²)\n"
-        "-  rolling mean and std over ~4 s windows\n"
-        "-  frequency features (Fourier transform, ~4 s)\n"
-        "-  cluster membership (k-means)"
-    )
-    box(ax, bx, 1.75, bw, 2.1, feat, left=True, fs=9.5)
-    box(
-        ax,
-        bx,
-        0.15,
-        bw,
-        0.95,
-        "Five models\nneural network, random forest, k-nearest neighbours,\n"
-        "decision tree, naive Bayes",
-        fs=9.5,
-    )
-    arrow(ax, (cx, 6.45), (cx, 6.15))
-    arrow(ax, (cx, 5.35), (cx, 5.05))
-    arrow(ax, (cx, 4.25), (cx, 3.95))
-    arrow(ax, (cx, 1.75), (cx, 1.1))
-    box(
-        ax,
-        8.0,
-        0.27,
-        3.7,
-        0.8,
-        "Predicted exercise\nper 200 ms step",
-        fc="#e3edf3",
-        ec=ACCENT,
-        bold=True,
-    )
-    arrow(ax, (bx + bw, 0.62), (8.0, 0.67), color=ACCENT)
-    box(ax, 8.0, 4.95, 3.7, 0.9, "Rep counter (no learning)\nsmooth the signal heavily")
-    box(ax, 8.0, 3.85, 3.7, 0.7, "Count the peaks")
-    box(ax, 8.0, 2.75, 3.7, 0.6, "Number of reps", fc="#e3edf3", ec=ACCENT, bold=True)
-    # the tutorial counts reps on the resampled data, before outlier handling and features
-    arrow(ax, (bx + bw, 5.75), (8.0, 5.4))
-    arrow(ax, (9.85, 4.95), (9.85, 4.55))
-    arrow(ax, (9.85, 3.85), (9.85, 3.35), color=ACCENT)
-    fig.subplots_adjust(left=0.01, right=0.99, top=0.88, bottom=0.01)
-    save(
-        fig,
-        out,
-        "fig04-pipeline",
-        "The tutorial's pipeline: files to resampled data, cleaned, turned into features and fed to "
-        "five models; a separate, non-learned counter finds the reps.",
-        "Flow diagram. Left column top to bottom: raw CSV files, merge and resample to 200 "
-        "milliseconds, outlier handling, feature engineering with a list of six feature types, "
-        "five models, then predicted exercise. A branch from merge and resample goes to a rep "
-        "counter that smooths the signal, then counts peaks to give a number of reps.",
-    )
-
-
 def fig05(sets, profile, out):
     s = pick_set(sets, "A-bench-heavy_")
     df, t5 = resampled(s, profile)
@@ -686,7 +554,6 @@ def main():
     print("fig01 sets:", fig01(sets, out))
     print("fig02 mean acc per exercise (g):", fig02(sets, out))
     print("fig03:", fig03(sets, out))
-    fig04(out)
     print("fig05:", fig05(sets, loader.profile, out))
     print("fig06:", fig06(sets, loader.profile, out))
     fig07(out)
