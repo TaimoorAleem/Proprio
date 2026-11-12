@@ -30,7 +30,7 @@ This repo is evolving the AI Workout Detector proof of concept (barbell exercise
 - Use Explore subagents for wide read-only sweeps.
 
 ## Fixed constraints (see DECISIONS.md)
-- Galaxy Watch, **left wrist only** (the dataset is assumed left-wrist too). No web client.
+- Galaxy Watch now; **Apple Watch + iPhone later**, after the Android product (D-036). Keep new formats, contracts and server-side code platform-neutral. **Left wrist only** (the dataset is assumed left-wrist too). No web client.
 - **CSF-1** (`PROJECT.md` §6.3) is the only path into models. Raw sensor data is immutable and always kept. Conversion happens server-side in shared Python.
 - Leakage-safe evaluation only: LOPO for MetaMotion, grouped by session for watch data. Never a random split over windows.
 - Model changes must pass the gates in `PROJECT.md` §6.5.

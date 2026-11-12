@@ -115,6 +115,7 @@ Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relat
 | 6 | LLM coach: Granite on watsonx.ai, RAG over pgvector, evaluation | ⏳ |
 | 7 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
 | 8 | Personalization from user corrections | ⏳ |
+| 9 | Apple Watch and iPhone apps (after the Android product) | ⏳ |
 
 Beyond Phase 8: [future roadmap ideas](docs/ROADMAP_IDEAS.md) (prescription adherence, velocity loss, verified sessions for remote trainers, tempo compliance). These are ideas, not commitments.
 
