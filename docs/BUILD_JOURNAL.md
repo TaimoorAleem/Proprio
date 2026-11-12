@@ -49,7 +49,6 @@ The part numbers follow the order things happened, not the phase numbers in `PRO
   - engineer features (low-pass filter, rolling statistics, FFT, PCA);
   - compare five classifiers.
 - **The claim:** 99.9% accuracy.
-- **The goal:** turn it into a real product that uses every technology in an IBM AI Center of Excellence job description. The rule: each technology must have a genuine job, and any weak fit gets called out instead of bolted on.
 
 > **The idea in plain words: what is a wrist sensor measuring?**
 >
@@ -105,7 +104,6 @@ The part numbers follow the order things happened, not the phase numbers in `PRO
   - a stable `main`;
   - all work on feature branches off `dev`;
   - `main` only moves on explicit approval;
-  - I'm the sole author of every commit.
 - **AI workflow:**
   - a stronger model (Opus) orchestrates: analysis, architecture, specs, review;
   - smaller models (Sonnet) implement tightly scoped tasks in isolated git worktrees;

@@ -14,8 +14,8 @@
 - [x] U1: calibration recording (2026-10-23, 275 s, watch in hand). All checks pass; see `docs/reports/u1-calibration.md`
 - [ ] U2: two gym sessions × 20 sets, left wrist, with video if possible. Session 1 planned Sunday 2026-10-25
 - [ ] U3: two friends × 10 sets, plus their consent forms (after Phase 2)
-- [ ] Install and smoke-test watch and phone builds (Phases 2, 5, 7)
-- [ ] Create IBM Cloud account; approve resources and secrets (Phase 7)
+- [ ] Install and smoke-test watch and phone builds (Phases 2, 5, 11)
+- [ ] Create IBM Cloud account; approve resources and secrets (Phase 11)
 
 ## Blockers / open questions
 - Resolved (D-024): Samsung Freecess. Keeping the recording screen on (dimmed) keeps the process TOP; verified on the wrist with 0 gaps.
@@ -88,20 +88,40 @@
 - [ ] [S] REST Assured E2E
 - [ ] [O] Integration review
 
-### Phase 6: LLM coach + RAG
+### Phase 6: prescription adherence ledger (D-037, D-039, D-040)
+- [ ] [O] Spec: prescriptions, demo templates, automatic set detection, open-set matching, ledger, client → clinician sharing, privacy and medical-device review
+- [ ] [S] Clinician web app; [S] backend + contracts (open exercise vocabulary); [S] phone/watch changes
+
+### Phase 7: wrist velocity-loss feedback
+- [ ] [O] Validation protocol against a reference (bar sensor or motion capture)
+- [ ] [S] Estimator from raw 50 Hz data; [S] haptic cue (only after validation)
+
+### Phase 8: verified session record for remote trainers
+- [ ] [O] Spec: discrepancy flags, consented trainer access
+- [ ] [S] Trainer view in the web app
+
+### Phase 9: tempo and time-under-tension compliance
+- [ ] [O] Phase-split method + video-validated protocol
+- [ ] [S] Post-session tempo report; [S] real-time haptics later
+
+### Phase 10: LLM coach + RAG
 - [ ] [O] KB sources, prompts, tool schema, eval rubric
 - [ ] [S] coach-svc; [S] golden set + nightly CI; phone chat UI
 
-### Phase 7: CI/CD + IBM Cloud + security
+### Phase 11: CI/CD + IBM Cloud + security
 - [ ] [S] Workflows, scans, ICR, Code Engine, IBM Databases/RabbitMQ provisioning
 - [ ] [O] Security review
 - [ ] [U] IBM Cloud account and secrets
 
-### Phase 8: personalization + stretch
+### Phase 12: personalization + stretch
 - [ ] [S] Per-user heads via RabbitMQ jobs
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-11: Features renumbered as Phases 6–9 after the backend foundation (coach → 10, cloud → 11, personalization → 12, Apple → 13; D-039). Web app for clinicians and trainers approved (D-040).
+- 2026-11-11: Features A–D committed as Phases 5A–5D between Phase 5 and Phase 6 (D-037); `ROADMAP_IDEAS.md` renamed `ROADMAP_FEATURES.md`. README architecture diagram converted to Mermaid. Blog platform: Medium (D-038).
+- 2026-11-11: Apple Watch + iPhone support added as Phase 9, after the Android product (D-036).
+- 2026-11-11: Future roadmap ideas A–D recorded in `docs/ROADMAP_IDEAS.md` (D-035); no change to phases or priorities.
 - 2026-11-04: BUILD_JOURNAL rewritten for beginner ML readers (theory boxes, glossary).
 - 2026-10-27: Countdown set start merged (D-034); needs installing and an on-wrist check.
 - 2026-10-27: Live preview verified on device by the owner (watch + phone). Ready for the U2 session-1 redo.

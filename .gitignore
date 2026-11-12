@@ -119,3 +119,6 @@ docs/INTERVIEW_NOTES.md
 
 # IDE (VS Code Java / Eclipse JDT) build output
 apps/android/**/bin/
+
+# generated blog figures (not committed)
+docs/blog/assets/
