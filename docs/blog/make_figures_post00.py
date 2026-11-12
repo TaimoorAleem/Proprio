@@ -35,7 +35,11 @@ REPO = Path(__file__).resolve().parents[2]
 INK = "#2b2b2b"
 MUTED = "#6b6b6b"
 GRID = "#e6e6e6"
-AXIS_COLOR = {"x": "#0072B2", "y": "#D55E00", "z": "#009E73"}  # Okabe-Ito blue / vermillion / green
+AXIS_COLOR = {
+    "x": "#0072B2",
+    "y": "#D55E00",
+    "z": "#009E73",
+}  # Okabe-Ito blue / vermillion / green
 EXERCISES = ["bench", "squat", "dead", "ohp", "row"]
 EX_NAME = {
     "bench": "Bench press",
@@ -96,9 +100,20 @@ CAPTIONS: list[tuple[str, str, str]] = []
 
 
 def title(fig, main: str, sub: str | None = None, top: float = 0.97):
-    fig.text(0.015, top, main, fontsize=15, fontweight="bold", ha="left", va="top", color=INK)
+    fig.text(
+        0.015, top, main, fontsize=15, fontweight="bold", ha="left", va="top", color=INK
+    )
     if sub:
-        fig.text(0.015, top - 0.065, sub, fontsize=10, ha="left", va="top", color=MUTED, wrap=True)
+        fig.text(
+            0.015,
+            top - 0.065,
+            sub,
+            fontsize=10,
+            ha="left",
+            va="top",
+            color=MUTED,
+            wrap=True,
+        )
 
 
 def save(fig, out: Path, name: str, caption: str, alt: str):
@@ -111,7 +126,8 @@ def save(fig, out: Path, name: str, caption: str, alt: str):
 def pick_set(sets, prefix: str):
     """First set (sorted by stem) whose stem starts with prefix."""
     cands = sorted(
-        (s for s in sets if s.meta["stem"].startswith(prefix)), key=lambda s: s.meta["stem"]
+        (s for s in sets if s.meta["stem"].startswith(prefix)),
+        key=lambda s: s.meta["stem"],
     )
     if not cands:
         raise SystemExit(f"no set with stem prefix {prefix!r}")
@@ -128,7 +144,11 @@ def style_ax(ax, exercise: str | None = None):
 
 def lowpass(sig, fs, cutoff, order):
     tmp = pd.DataFrame({"x": np.asarray(sig, dtype=float)})
-    return LowPassFilter().low_pass_filter(tmp, "x", fs, cutoff, order=order)["x_lowpass"].to_numpy()
+    return (
+        LowPassFilter()
+        .low_pass_filter(tmp, "x", fs, cutoff, order=order)["x_lowpass"]
+        .to_numpy()
+    )
 
 
 def resampled(set_, profile):
@@ -150,7 +170,9 @@ def fig01(sets, out):
             ax = axes[i, j]
             t = (stream.t_ns - stream.t_ns[0]) / 1e9
             for k, a in enumerate("xyz"):
-                ax.plot(t, stream.xyz[:, k], color=AXIS_COLOR[a], lw=1.1, label=f"{a} axis")
+                ax.plot(
+                    t, stream.xyz[:, k], color=AXIS_COLOR[a], lw=1.1, label=f"{a} axis"
+                )
             style_ax(ax, ex if i == 0 else None)
             if j == 0:
                 ax.set_ylabel(ylabel)
@@ -158,7 +180,9 @@ def fig01(sets, out):
                 ax.set_title(EX_NAME[ex], fontsize=10.5, fontweight="bold", pad=8)
             if i == 1:
                 ax.set_xlabel("Time (s)")
-    axes[0, 0].legend(loc="lower left", fontsize=8, ncol=3, handlelength=1.2, columnspacing=0.8)
+    axes[0, 0].legend(
+        loc="lower left", fontsize=8, ncol=3, handlelength=1.2, columnspacing=0.8
+    )
     title(
         fig,
         "What one heavy set looks like",
@@ -192,7 +216,9 @@ def fig02(sets, out):
     fig, axes = plt.subplots(1, 6, figsize=(12, 4.6), sharey=True)
     for ax, ex in zip(axes, order):
         vals = means[ex]
-        bars = ax.bar(["x", "y", "z"], vals, color=[AXIS_COLOR[a] for a in "xyz"], width=0.65)
+        bars = ax.bar(
+            ["x", "y", "z"], vals, color=[AXIS_COLOR[a] for a in "xyz"], width=0.65
+        )
         for b, v in zip(bars, vals):
             va, off = ("bottom", 0.04) if v >= 0 else ("top", -0.04)
             ax.text(
@@ -228,7 +254,9 @@ def fig02(sets, out):
         "g. Bench and overhead press have y near +0.9 g, deadlift and row have y near -1.0 g, "
         "squat splits gravity between y and z, rest is in between.",
     )
-    return {k: tuple(float(x) for x in np.round(v, 2)) for k, v in sorted(means.items())}
+    return {
+        k: tuple(float(x) for x in np.round(v, 2)) for k, v in sorted(means.items())
+    }
 
 
 def fig03(sets, out):
@@ -245,7 +273,14 @@ def fig03(sets, out):
     w = (start, start + 2.0)
     fig, axes = plt.subplots(2, 1, figsize=(12, 5.6), sharex=True)
     spec = [
-        (axes[0], t_a, s.acc.xyz[:, 1], "Accelerometer y (g)", "Accelerometer, 12.5 Hz", 80),
+        (
+            axes[0],
+            t_a,
+            s.acc.xyz[:, 1],
+            "Accelerometer y (g)",
+            "Accelerometer, 12.5 Hz",
+            80,
+        ),
         (axes[1], t_g, s.gyr.xyz[:, 1], "Gyroscope y (deg/s)", "Gyroscope, 25 Hz", 40),
     ]
     for ax, t, y, label, note, dt_ms in spec:
@@ -259,7 +294,11 @@ def fig03(sets, out):
         ax.set_xlim(*w)
         ax.set_ylabel(label)
         ax.set_title(
-            f"{note}: one snapshot every {dt_ms} ms", loc="left", fontsize=10, color=INK, pad=6
+            f"{note}: one snapshot every {dt_ms} ms",
+            loc="left",
+            fontsize=10,
+            color=INK,
+            pad=6,
         )
         style_ax(ax)
         i0 = idx[len(idx) // 2]
@@ -268,7 +307,13 @@ def fig03(sets, out):
             "",
             xy=(t[i0 + 1], ytop),
             xytext=(t[i0], ytop),
-            arrowprops={"arrowstyle": "<->", "color": MUTED, "lw": 1.0, "shrinkA": 0, "shrinkB": 0},
+            arrowprops={
+                "arrowstyle": "<->",
+                "color": MUTED,
+                "lw": 1.0,
+                "shrinkA": 0,
+                "shrinkB": 0,
+            },
         )
         ax.text(
             (t[i0] + t[i0 + 1]) / 2,
@@ -301,10 +346,18 @@ def fig03(sets, out):
     return f"{s.meta['stem'][:24]}, window {w[0]:.1f}-{w[1]:.1f} s"
 
 
-def box(ax, x, y, w, h, text, fc="#f4f4f4", ec="#9a9a9a", fs=10, bold=False, left=False):
+def box(
+    ax, x, y, w, h, text, fc="#f4f4f4", ec="#9a9a9a", fs=10, bold=False, left=False
+):
     ax.add_patch(
         FancyBboxPatch(
-            (x, y), w, h, boxstyle="round,pad=0.0,rounding_size=0.12", fc=fc, ec=ec, lw=1.2
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.0,rounding_size=0.12",
+            fc=fc,
+            ec=ec,
+            lw=1.2,
         )
     )
     tx = x + 0.25 if left else x + w / 2
@@ -324,7 +377,14 @@ def box(ax, x, y, w, h, text, fc="#f4f4f4", ec="#9a9a9a", fs=10, bold=False, lef
 def arrow(ax, p0, p1, color="#7a7a7a"):
     ax.add_patch(
         FancyArrowPatch(
-            p0, p1, arrowstyle="-|>", mutation_scale=14, lw=1.4, color=color, shrinkA=0, shrinkB=0
+            p0,
+            p1,
+            arrowstyle="-|>",
+            mutation_scale=14,
+            lw=1.4,
+            color=color,
+            shrinkA=0,
+            shrinkB=0,
         )
     )
 
@@ -342,9 +402,24 @@ def fig04(out):
     )
     bw, bx = 6.2, 0.3
     cx = bx + bw / 2
-    box(ax, bx, 6.45, bw, 0.8, "Raw CSV files\none per sensor per set, labels in the file name", fc="#fff")
+    box(
+        ax,
+        bx,
+        6.45,
+        bw,
+        0.8,
+        "Raw CSV files\none per sensor per set, labels in the file name",
+        fc="#fff",
+    )
     box(ax, bx, 5.35, bw, 0.8, "Merge and resample\nto 200 ms steps (5 per second)")
-    box(ax, bx, 4.25, bw, 0.8, "Outlier handling\nIQR, Chauvenet's criterion, local outlier factor")
+    box(
+        ax,
+        bx,
+        4.25,
+        bw,
+        0.8,
+        "Outlier handling\nIQR, Chauvenet's criterion, local outlier factor",
+    )
     feat = (
         "Feature engineering\n"
         "-  low-pass filter (smooth away jitter)\n"
@@ -369,14 +444,25 @@ def fig04(out):
     arrow(ax, (cx, 5.35), (cx, 5.05))
     arrow(ax, (cx, 4.25), (cx, 3.95))
     arrow(ax, (cx, 1.75), (cx, 1.1))
-    box(ax, 8.0, 0.27, 3.7, 0.8, "Predicted exercise\nper 200 ms step", fc="#e3edf3", ec=ACCENT, bold=True)
+    box(
+        ax,
+        8.0,
+        0.27,
+        3.7,
+        0.8,
+        "Predicted exercise\nper 200 ms step",
+        fc="#e3edf3",
+        ec=ACCENT,
+        bold=True,
+    )
     arrow(ax, (bx + bw, 0.62), (8.0, 0.67), color=ACCENT)
-    box(ax, 8.0, 3.9, 3.7, 0.9, "Rep counter (no learning)\nsmooth the signal heavily")
-    box(ax, 8.0, 2.8, 3.7, 0.7, "Count the peaks")
-    box(ax, 8.0, 1.7, 3.7, 0.6, "Number of reps", fc="#e3edf3", ec=ACCENT, bold=True)
-    arrow(ax, (bx + bw, 4.65), (8.0, 4.35))
-    arrow(ax, (9.85, 3.9), (9.85, 3.5))
-    arrow(ax, (9.85, 2.8), (9.85, 2.3), color=ACCENT)
+    box(ax, 8.0, 4.95, 3.7, 0.9, "Rep counter (no learning)\nsmooth the signal heavily")
+    box(ax, 8.0, 3.85, 3.7, 0.7, "Count the peaks")
+    box(ax, 8.0, 2.75, 3.7, 0.6, "Number of reps", fc="#e3edf3", ec=ACCENT, bold=True)
+    # the tutorial counts reps on the resampled data, before outlier handling and features
+    arrow(ax, (bx + bw, 5.75), (8.0, 5.4))
+    arrow(ax, (9.85, 4.95), (9.85, 4.55))
+    arrow(ax, (9.85, 3.85), (9.85, 3.35), color=ACCENT)
     fig.subplots_adjust(left=0.01, right=0.99, top=0.88, bottom=0.01)
     save(
         fig,
@@ -386,7 +472,7 @@ def fig04(out):
         "five models; a separate, non-learned counter finds the reps.",
         "Flow diagram. Left column top to bottom: raw CSV files, merge and resample to 200 "
         "milliseconds, outlier handling, feature engineering with a list of six feature types, "
-        "five models, then predicted exercise. A branch from outlier handling goes to a rep "
+        "five models, then predicted exercise. A branch from merge and resample goes to a rep "
         "counter that smooths the signal, then counts peaks to give a number of reps.",
     )
 
@@ -402,9 +488,25 @@ def fig05(sets, profile, out):
     hi = min(lo + 10.0, t5[-1])
     fig, ax = plt.subplots(figsize=(12, 5.0))
     m = (t_raw >= lo) & (t_raw <= hi)
-    ax.plot(t_raw[m], s.acc.xyz[m, 1], "o", color="#9a9a9a", ms=4.5, zorder=2, label="Raw samples (12.5 Hz)")
+    ax.plot(
+        t_raw[m],
+        s.acc.xyz[m, 1],
+        "o",
+        color="#9a9a9a",
+        ms=4.5,
+        zorder=2,
+        label="Raw samples (12.5 Hz)",
+    )
     m5 = (t5 >= lo) & (t5 <= hi)
-    ax.plot(t5[m5], sig5[m5], "-", color=INK, lw=1.2, zorder=3, label="Resampled, 200 ms steps (5 Hz)")
+    ax.plot(
+        t5[m5],
+        sig5[m5],
+        "-",
+        color=INK,
+        lw=1.2,
+        zorder=3,
+        label="Resampled, 200 ms steps (5 Hz)",
+    )
     ax.plot(
         t5[m5],
         filt[m5],
@@ -436,7 +538,9 @@ def fig05(sets, profile, out):
         "line is the resampled signal, and a thick orange line is the smoothed signal that follows "
         "the slow rep pattern without the small wiggles.",
     )
-    return f"{s.meta['stem'][:24]}, {lo:.0f}-{hi:.0f} s, cutoff {cutoff} Hz, order {order}"
+    return (
+        f"{s.meta['stem'][:24]}, {lo:.0f}-{hi:.0f} s, cutoff {cutoff} Hz, order {order}"
+    )
 
 
 def fig06(sets, profile, out):
@@ -445,27 +549,50 @@ def fig06(sets, profile, out):
     col, cutoff = cfg["exercises"][ex]["column"], cfg["exercises"][ex]["cutoff"]
     fig, axes = plt.subplots(2, 1, figsize=(12, 6.6), sharey=True)
     used = []
-    for ax, (cat, prefix) in zip(axes, (("heavy", "E-bench-heavy_"), ("medium", "E-bench-medium_"))):
+    for ax, (cat, prefix) in zip(
+        axes, (("heavy", "E-bench-heavy_"), ("medium", "E-bench-medium_"))
+    ):
         s = pick_set(sets, prefix)
         df, _ = resampled(s, profile)
         sig = add_magnitudes(df)[col].to_numpy()
         t = np.arange(len(sig)) * 0.2
         filt = lowpass(sig, cfg["sampling_frequency"], cutoff, cfg["order"])
         pk = count_peaks(sig, cfg["sampling_frequency"], cutoff, cfg["order"])
-        ax.plot(t, filt, color=INK, lw=LW, label=f"Low-pass filtered acceleration magnitude ({cutoff} Hz)")
         ax.plot(
-            t[pk], filt[pk], "o", color=EX_COLOR[ex], ms=9, mec="white", mew=1.2, zorder=4,
+            t,
+            filt,
+            color=INK,
+            lw=LW,
+            label=f"Low-pass filtered acceleration magnitude ({cutoff} Hz)",
+        )
+        ax.plot(
+            t[pk],
+            filt[pk],
+            "o",
+            color=EX_COLOR[ex],
+            ms=9,
+            mec="white",
+            mew=1.2,
+            zorder=4,
             label="Detected peak",
         )
         for n, i in enumerate(pk, start=1):
             ax.annotate(
-                str(n), (t[i], filt[i]), xytext=(0, 9), textcoords="offset points",
-                ha="center", fontsize=9, color=INK,
+                str(n),
+                (t[i], filt[i]),
+                xytext=(0, 9),
+                textcoords="offset points",
+                ha="center",
+                fontsize=9,
+                color=INK,
             )
         exp = cfg["expected_reps"][cat]
         ax.set_title(
             f"{cat.capitalize()} set: expected {exp} reps, {len(pk)} peaks marked",
-            loc="left", fontsize=10.5, fontweight="bold", pad=8,
+            loc="left",
+            fontsize=10.5,
+            fontweight="bold",
+            pad=8,
         )
         ax.set_ylabel("Acceleration magnitude (g)")
         ax.margins(y=0.3)
@@ -499,8 +626,14 @@ def fig07(out):
     bars = ax.bar(labels, vals, color=["#b8b8b8", ACCENT], width=0.4)
     for b, v in zip(bars, vals):
         ax.text(
-            b.get_x() + b.get_width() / 2, v + 5, str(v), ha="center", va="bottom",
-            fontsize=16, fontweight="bold", color=INK,
+            b.get_x() + b.get_width() / 2,
+            v + 5,
+            str(v),
+            ha="center",
+            va="bottom",
+            fontsize=16,
+            fontweight="bold",
+            color=INK,
         )
     ax.set_ylim(0, 255)
     ax.set_ylabel("Median exercises recorded")
@@ -513,8 +646,13 @@ def fig07(out):
         "Median home exercises recorded: the diary versus an accelerometer hidden in an ankle weight.",
     )
     fig.text(
-        0.015, 0.015, "Nicolson et al., JOSPT 2018 (accelerometer hidden in an ankle weight)",
-        fontsize=8.5, color=MUTED, ha="left", va="bottom",
+        0.015,
+        0.015,
+        "Nicolson et al., JOSPT 2018 (accelerometer hidden in an ankle weight)",
+        fontsize=8.5,
+        color=MUTED,
+        ha="left",
+        va="bottom",
     )
     fig.tight_layout(rect=(0, 0.04, 1, 0.86))
     save(
@@ -529,7 +667,9 @@ def fig07(out):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--raw", default=str(REPO / "data" / "raw" / "MetaMotion"))
     ap.add_argument("--out", default=str(REPO / "docs" / "blog" / "assets" / "post-00"))
     args = ap.parse_args()
@@ -539,7 +679,9 @@ def main():
 
     loader = DataLoader(args.raw)
     sets = loader.load_sets()
-    print(f"Loaded {len(sets)} MetaMotion sets from {args.raw} (duplicate *_1.4.41.csv ignored)")
+    print(
+        f"Loaded {len(sets)} MetaMotion sets from {args.raw} (duplicate *_1.4.41.csv ignored)"
+    )
 
     print("fig01 sets:", fig01(sets, out))
     print("fig02 mean acc per exercise (g):", fig02(sets, out))
