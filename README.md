@@ -116,6 +116,8 @@ Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relat
 | 7 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
 | 8 | Personalization from user corrections | ⏳ |
 
+Beyond Phase 8: [future roadmap ideas](docs/ROADMAP_IDEAS.md) (prescription adherence, velocity loss, verified sessions for remote trainers, tempo compliance). These are ideas, not commitments.
+
 ## Documentation
 - [`docs/PROJECT.md`](docs/PROJECT.md): the source of truth for scope, architecture, sensor spec and quality gates.
 - [`docs/PROGRESS.md`](docs/PROGRESS.md): current phase and next steps.

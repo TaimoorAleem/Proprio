@@ -40,6 +40,8 @@ Proprio is a gym logger:
 - Kafka, Cassandra, Maven, Selenium/Puppeteer (see the tech map for reasons).
 - The LLM doing signal classification.
 
+> **Future roadmap ideas (not scope):** prescription adherence, wrist velocity loss, a session truth feed for remote trainers, and tempo compliance are recorded in [`ROADMAP_IDEAS.md`](ROADMAP_IDEAS.md) (D-035). They change nothing above; adopting one is a scope change.
+
 ## 3. Baseline codebase (as of 2026-10-21)
 - **Pipeline:** `run_pipeline.py` runs these steps:
   - `src/data/preprocessor.py`: `DataLoader` handles load, merge and resampling to 200 ms. `OutlierRemover` supports iqr, chauvenet and lof.

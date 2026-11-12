@@ -102,6 +102,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-11: Future roadmap ideas A–D recorded in `docs/ROADMAP_IDEAS.md` (D-035); no change to phases or priorities.
 - 2026-11-04: BUILD_JOURNAL rewritten for beginner ML readers (theory boxes, glossary).
 - 2026-10-27: Countdown set start merged (D-034); needs installing and an on-wrist check.
 - 2026-10-27: Live preview verified on device by the owner (watch + phone). Ready for the U2 session-1 redo.
