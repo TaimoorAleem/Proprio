@@ -33,6 +33,7 @@ Proprio is a gym logger:
 | Per-user personalization from corrections | planned |
 | Stretch: live on-watch rep counter (Kotlin), Helm/K8s, Granite LoRA | stretch |
 | Apple Watch recorder + iPhone app (after the Android product; D-036) | planned, later |
+| Prescription adherence ledger · velocity-loss feedback · verified sessions for trainers · tempo compliance (Phases 5A–5D; D-037) | planned |
 
 ### Out of scope (decided)
 - Web client. As a result, HTML/JS/Ajax is a **known gap** in tech coverage.
@@ -41,7 +42,7 @@ Proprio is a gym logger:
 - Kafka, Cassandra, Maven, Selenium/Puppeteer (see the tech map for reasons).
 - The LLM doing signal classification.
 
-> **Future roadmap ideas (not scope):** prescription adherence, wrist velocity loss, a session truth feed for remote trainers, and tempo compliance are recorded in [`ROADMAP_IDEAS.md`](ROADMAP_IDEAS.md) (D-035). They change nothing above; adopting one is a scope change.
+> **Product features 5A–5D (in scope, D-037):** prescription adherence ledger, wrist velocity-loss feedback, a verified session record for remote trainers, and tempo compliance. Detail, dependencies and open conflicts: [`ROADMAP_FEATURES.md`](ROADMAP_FEATURES.md). They sit between Phase 5 and Phase 6.
 
 ## 3. Baseline codebase (as of 2026-10-21)
 - **Pipeline:** `run_pipeline.py` runs these steps:
@@ -249,6 +250,10 @@ Legend: [O] orchestrator (Opus) · [S] Sonnet subagent · [U] owner (physical) �
 | 3 Calibration + domain shift | 5–6 | U1/U2/U3, eval harness, profile fit, `watch-val-v1` frozen | domain-shift report with all gates evaluated |
 | 4 Remediation + PyTorch | 6–8 | decision tree, robust features, 1D-CNN (trained with on-the-fly rotation augmentation) → ONNX, rep re-tune, CI gate, MLflow model registry + aliases | model passes gates (or provisional); `dvc repro` reproducible |
 | 5 Services MVP | 8–10 | OpenAPI contract, core-api, inference-svc (loads `@production` from the MLflow registry), compose (+ MLflow server), phone integration, REST Assured E2E | watch → result on phone in < 3 s locally; DLQ/retry demonstrated |
+| 5A Prescription adherence ledger | after 5 | clinician/coach prescriptions with per-exercise demo templates; automatic set detection; open-set exercise matching (incl. "unknown"); reps, rest, rep duration; weekly done-vs-prescribed ledger; consented client → clinician sharing; Granite summary restates computed facts only, citing session ids | ledger matches hand-verified sessions; matching accuracy and unknown rate measured on held-out sessions; sharing is revocable and audited |
+| 5B Wrist velocity-loss feedback | after 5A | within-set velocity-loss estimate from raw 50 Hz data; haptic cue at a target loss (e.g. 20–25%) | validated against a reference (bar sensor or motion capture) before any user-facing cue; never presented as reps in reserve or proximity to failure |
+| 5C Verified session record for remote trainers | after 5A | watch-verified sets, rest, rep duration and session length vs the logged or prescribed workout; discrepancy flags | flags match hand-verified sessions; trainer access only with client consent |
+| 5D Tempo and time-under-tension compliance | after 5A | per-rep lifting/lowering phase split; seconds per phase vs prescribed tempo; post-session first, real-time haptics later | phase timing validated against video on held-out sessions |
 | 6 LLM coach + RAG | 10–11 | coach-svc, pgvector, Granite (watsonx; Ollama fallback), golden-set eval logged with `mlflow.evaluate` and versioned prompts, phone chat | answers cite sources; ≥ 90% golden pass; injection prompts refused |
 | 7 CI/CD + IBM Cloud + security | 11–12 | full workflows, Trivy, CodeQL, ICR, Code Engine, IBM Databases/RabbitMQ provisioning, MLflow server (Postgres backend, COS artifacts, auth; reachable only by CI and services) | tag → deployed; phone works against cloud; all gates green |
 | 8 Personalization + stretch | 12+ | per-user heads via RabbitMQ jobs; stretch items | per-user check improves before activation |

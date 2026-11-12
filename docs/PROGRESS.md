@@ -102,6 +102,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-11: Features A–D committed as Phases 5A–5D between Phase 5 and Phase 6 (D-037); `ROADMAP_IDEAS.md` renamed `ROADMAP_FEATURES.md`. README architecture diagram converted to Mermaid. Blog platform: Medium (D-038).
 - 2026-11-11: Apple Watch + iPhone support added as Phase 9, after the Android product (D-036).
 - 2026-11-11: Future roadmap ideas A–D recorded in `docs/ROADMAP_IDEAS.md` (D-035); no change to phases or priorities.
 - 2026-11-04: BUILD_JOURNAL rewritten for beginner ML readers (theory boxes, glossary).

@@ -23,17 +23,24 @@ It started as **AI Workout Detector**, a 2019 research proof of concept: one Met
 | **Verified with physics** | A guided calibration confirmed the watch's units, axes and gyroscope signs. Static \|a\| = 0.989 g. Integrating the gyroscope reproduces gravity changes within 2–3°. |
 
 ## How it works
-```
- Galaxy Watch (Wear OS)        Android phone              Backend (Phase 5)
- ┌─────────────────────┐ Data ┌──────────────────┐ REST  ┌──────────────────────────────┐
- │ 50 Hz acc + gyro,   │Layer │ label sets, reps │ +JWT  │ core-api (Java, Spring Boot) │
- │ raw units, sessions ├─────►│ review, export   ├──────►│ PostgreSQL · object storage  │
- │ + segments, calib.  │      │ upload, history  │       │      │ RabbitMQ              │
- └─────────────────────┘      └──────────────────┘       │      ▼                       │
-                                                         │ inference-svc (Python)       │
-   raw data is never converted on device                 │ raw → CSF-1 → model → reps   │
-                                                         │ coach-svc (Granite, RAG)     │
-                                                         └──────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph W["Galaxy Watch (Wear OS)"]
+        W1["50 Hz accelerometer + gyroscope<br/>raw units, whole sessions<br/>marked sets, calibration"]
+    end
+    subgraph P["Android phone"]
+        P1["label sets and reps<br/>review, export<br/>upload, history"]
+    end
+    subgraph B["Backend"]
+        B1["core-api (Java, Spring Boot)<br/>PostgreSQL · object storage"]
+        B2["inference-svc (Python)<br/>raw → CSF-1 → model → reps"]
+        B3["coach-svc (Granite, RAG)"]
+        B1 -- "RabbitMQ" --> B2
+        B2 -- "results" --> B1
+        B1 --- B3
+    end
+    W1 -- "Wearable Data Layer<br/>raw data, never converted on the watch" --> P1
+    P1 -- "REST + JWT" --> B1
 ```
 1. The **watch** records a whole session continuously, in native units and timestamps. Sets, rest and "other" are marked segments inside it.
 2. The **phone** labels segments (exercise, load, reps), lets you fix mistakes, and uploads the untouched raw file plus a separate labels file.
@@ -112,12 +119,16 @@ Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relat
 | 3 | Calibration (done) and real gym data: axis fit, pass/fail gates on watch data | 🟡 in progress |
 | 4 | PyTorch model, ONNX, model registry, rep-counter rework | 🟡 started |
 | 5 | Services: core-api, inference-svc, RabbitMQ, compose, E2E tests | 🟡 started |
+| 5A | Prescription adherence ledger for clinicians and coaches | ⏳ |
+| 5B | Wrist velocity-loss feedback | ⏳ |
+| 5C | Verified session record for remote trainers | ⏳ |
+| 5D | Tempo and time-under-tension compliance | ⏳ |
 | 6 | LLM coach: Granite on watsonx.ai, RAG over pgvector, evaluation | ⏳ |
 | 7 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
 | 8 | Personalization from user corrections | ⏳ |
 | 9 | Apple Watch and iPhone apps (after the Android product) | ⏳ |
 
-Beyond Phase 8: [future roadmap ideas](docs/ROADMAP_IDEAS.md) (prescription adherence, velocity loss, verified sessions for remote trainers, tempo compliance). These are ideas, not commitments.
+Phases 5A–5D are described in [`docs/ROADMAP_FEATURES.md`](docs/ROADMAP_FEATURES.md).
 
 ## Documentation
 - [`docs/PROJECT.md`](docs/PROJECT.md): the source of truth for scope, architecture, sensor spec and quality gates.
