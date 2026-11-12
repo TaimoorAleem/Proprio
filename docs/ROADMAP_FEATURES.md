@@ -1,9 +1,9 @@
-# Future roadmap ideas
+# Roadmap features 5A–5D
 
-> **Not scope.** Nothing here changes the current phases, gates, priorities or code in [`PROJECT.md`](PROJECT.md). These are candidate directions recorded so that current design choices can keep the door open where that is cheap. Adopting any of them is a scope change: it needs the owner's approval and a `DECISIONS.md` entry (D-035 records only that the ideas exist).
-> Added 2026-11-11 from the owner's notes.
+> **Committed** (D-037, 2026-11-11). These four features are product scope, scheduled as Phases 5A–5D between the services MVP (Phase 5) and the LLM coach (Phase 6) in [`PROJECT.md`](PROJECT.md) §7. They were first recorded as ideas earlier the same day (D-035). The conflicts and dependencies below are now open work. The ones that touch fixed decisions (D-005 no web client, D-006 left wrist only) need an owner decision before the phase that hits them starts.
+> Letters match phases: feature A is Phase 5A, and so on.
 
-## Why these ideas
+## Why these features
 
 Exercise classification and rep counting on their own are a crowded space: Apple, Garmin, Whoop and Train Fitness ship them. Proprio needs a stronger reason to exist.
 
@@ -14,7 +14,7 @@ The owner's research points at a different problem: **verifying unsupervised, pr
 
 These figures come from the owner's research notes and haven't been re-checked here. Verify the citations before using them publicly (README, blog, pitch).
 
-## The ideas
+## The features
 
 ### A. Prescription adherence ledger
 - **For:** physiotherapists, kinesiologists and coaches who prescribe unsupervised strength work, and their clients.
@@ -48,7 +48,7 @@ These figures come from the owner's research notes and haven't been re-checked h
 
 ## Reconciliation with the current design
 
-What already fits, what conflicts, and what would be needed. Nothing in this section changes anything now.
+What already fits, what conflicts, and what each phase will need.
 
 | Topic | Current state | Relevance to A–D |
 |---|---|---|
@@ -65,7 +65,7 @@ What already fits, what conflicts, and what would be needed. Nothing in this sec
 | LLM coach: answers cite sources (Phase 6 gate) | Grounding via tools and RAG | Consistent with A's rule that summaries only restate computed facts and cite session ids. |
 | Accelerometer range ±8 g; saturation counted (live preview) | Measured on device | B (fast concentric phases) should check saturation rates before relying on integration. |
 
-## Cheap ways to keep the door open (when the relevant code is touched anyway)
+## Prerequisites to build before or during Phases 5A–5D
 - Keep raw native-rate data and watch timestamps exactly as today. This is the single most important enabler for B and D.
 - Keep segment timing in every result event, as `session.analyzed` already does.
 - On the next contract or schema version, replace closed exercise enums with an open id.
