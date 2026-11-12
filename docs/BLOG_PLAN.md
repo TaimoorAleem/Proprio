@@ -4,7 +4,7 @@
 
 ## The series
 
-**Working title:** "Proprio: building a watch-based lifting tracker, honestly".
+**Working title:** "Building Proprio: an intelligent smartwatch-based fitness tracker".
 
 **Audience:** beginner ML students and early-career engineers. Each post teaches one idea through a real problem, with real numbers, including the failures.
 
@@ -12,8 +12,7 @@
 - About 1,500–2,500 words.
 - A hook in the first paragraph.
 - 2–4 "idea in plain words" boxes, reused from the journal.
-- One or two charts or diagrams.
-- A "what I'd tell my past self" ending.
+- Few charts or diagrams.
 - Links into the repo for evidence: one link per claim, to the exact report or decision.
 
 ## Posts
@@ -31,7 +30,6 @@
 | 8 | From scripts to services | Contract-first APIs, failure-first messaging, idempotency, presigned uploads | Part 9 | Architecture diagram; retry and dead-letter flow | Journal draft ready |
 | 9 | First gym session: fix the data, not the model | Debugging the stage before the model; noise floors; questioning your own gates | Part 10 | 27 / 60 / 73% bars (in-sample); watch vs training gravity; rep-signal plot | Journal draft ready (in-sample, labelled) |
 | 10 | **The verdict** | Held-out evaluation; do the session-1 changes generalise? | Not written | Results with intervals | **Blocked:** session-1 redo and session 2 |
-| 11 | Building it with an AI orchestrator and coding agents | Specs, reviews, verification; where the AI was wrong and how it was caught | Journal notes across all parts | Workflow diagram | Can be drafted now |
 
 **Later posts** (written as the work happens): OHP vs bench, the rep-counter rework, the Granite coach (RAG over training history, with its evaluation), shipping to IBM Cloud, a retrospective.
 
