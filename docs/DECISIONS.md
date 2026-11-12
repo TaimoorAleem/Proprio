@@ -154,3 +154,9 @@ The owner made the four features from D-035 commitments and placed them between 
 
 **D-038 · 2026-11-11 · Blog platform: Medium; diagrams in Mermaid**
 The series is published on Medium. Diagrams are written as Mermaid in the repo drafts (readable on GitHub, editable as text). Medium renders neither Mermaid nor Markdown tables, so publishing a post means exporting each Mermaid diagram to an image and turning tables into lists or images. Generated images stay out of git (`docs/blog/assets/`, gitignored).
+
+**D-039 · 2026-11-11 · Features A–D are separate phases 6–9; later phases renumbered**
+The owner rejected letter suffixes (D-037's 5A–5D). The features become their own phases right after the backend foundation: 6 prescription adherence ledger, 7 wrist velocity-loss feedback, 8 verified session record for remote trainers, 9 tempo compliance. Later phases shift: coach 6 → 10, CI/CD + IBM Cloud + security 7 → 11, personalization 8 → 12, Apple Watch + iPhone 9 → 13. Decisions written before this date keep their original numbers; read "Phase 6/7/8/9" in D-001…D-038 as the coach, cloud, personalization and Apple phases (now 10–13).
+
+**D-040 · 2026-11-11 · A web app for clinicians and trainers (amends D-005)**
+The owner approved a web client for clinicians and trainers. Phase 6 needs it to create prescriptions and read adherence ledgers; Phase 8 needs a trainer view of verified sessions. Lifters still use only the watch and the phone, so there is no consumer web client. This closes the HTML/JS/Ajax gap in tech coverage. Access to a client's data is always consented by the client and revocable (the current user-only scoping is extended, not loosened).
