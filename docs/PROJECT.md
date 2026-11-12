@@ -9,7 +9,7 @@ Evolve the AI Workout Detector proof of concept into **Proprio**, a working prod
 
 ## 2. Product vision and scope
 Proprio is a gym logger:
-- The user starts a set on a **Samsung Galaxy Watch (Wear OS), worn on the left wrist**, and lifts.
+- The user starts a set on a **Samsung Galaxy Watch (Wear OS), worn on the left wrist**, and lifts. **Apple Watch + iPhone** support follows once the Android product is done (D-036); Android comes first because it's the hardware the owner can test on.
 - The system identifies the exercise (bench, squat, deadlift, OHP, row, rest, other) and counts reps.
 - The **Android phone app** shows the logged workout, history and progress. One tap corrects a label. A recording-review screen plots a set's signals.
 - An **LLM coach** writes post-workout summaries and answers questions, grounded in the user's own history (tool calls) and a curated knowledge base (RAG).
@@ -32,6 +32,7 @@ Proprio is a gym logger:
 | MLflow experiment tracking, model registry, LLM eval runs | planned |
 | Per-user personalization from corrections | planned |
 | Stretch: live on-watch rep counter (Kotlin), Helm/K8s, Granite LoRA | stretch |
+| Apple Watch recorder + iPhone app (after the Android product; D-036) | planned, later |
 
 ### Out of scope (decided)
 - Web client. As a result, HTML/JS/Ajax is a **known gap** in tech coverage.
@@ -251,6 +252,7 @@ Legend: [O] orchestrator (Opus) · [S] Sonnet subagent · [U] owner (physical) �
 | 6 LLM coach + RAG | 10–11 | coach-svc, pgvector, Granite (watsonx; Ollama fallback), golden-set eval logged with `mlflow.evaluate` and versioned prompts, phone chat | answers cite sources; ≥ 90% golden pass; injection prompts refused |
 | 7 CI/CD + IBM Cloud + security | 11–12 | full workflows, Trivy, CodeQL, ICR, Code Engine, IBM Databases/RabbitMQ provisioning, MLflow server (Postgres backend, COS artifacts, auth; reachable only by CI and services) | tag → deployed; phone works against cloud; all gates green |
 | 8 Personalization + stretch | 12+ | per-user heads via RabbitMQ jobs; stretch items | per-user check improves before activation |
+| 9 Apple Watch + iPhone (after the Android product) | later | watchOS recorder (Swift, Core Motion, workout session), iPhone app (WatchConnectivity, generated API client), Apple Watch device profile + calibration, Raw Format v1 writer in Swift | Swift writer passes the `protocol/golden` conformance tests; calibration gate passes on an Apple Watch; same backend, unchanged contracts |
 
 ## 8. Testing and CI/CD
 - **Python:** pytest + hypothesis, golden files (Raw v1 ↔ CSF), model-regression gate (against the MLflow `production` alias), RAG golden set (MLflow evaluation runs).
