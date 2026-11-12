@@ -1,7 +1,6 @@
-# Roadmap features 5A–5D
+# Roadmap features: Phases 6–9
 
-> **Committed** (D-037, 2026-11-11). These four features are product scope, scheduled as Phases 5A–5D between the services MVP (Phase 5) and the LLM coach (Phase 6) in [`PROJECT.md`](PROJECT.md) §7. They were first recorded as ideas earlier the same day (D-035). The conflicts and dependencies below are now open work. The ones that touch fixed decisions (D-005 no web client, D-006 left wrist only) need an owner decision before the phase that hits them starts.
-> Letters match phases: feature A is Phase 5A, and so on.
+> **Committed** (D-037, D-039, 2026-11-11). These four features are product scope, scheduled as separate phases after the backend foundation (Phase 5) in [`PROJECT.md`](PROJECT.md) §7: **A = Phase 6, B = Phase 7, C = Phase 8, D = Phase 9**. The coach follows as Phase 10. A web app for clinicians and trainers is approved (D-040). The left-wrist rule (D-006) still needs an owner decision before Phase 6 starts. They were first recorded as ideas earlier the same day (D-035).
 
 ## Why these features
 
@@ -55,17 +54,17 @@ What already fits, what conflicts, and what each phase will need.
 | Raw data kept at native rate, immutable (CSF-1 conversion server-side) | Raw zips keep 50 Hz watch timestamps; models use 5 Hz CSF-1 bins | **Door already open.** B and D need sub-rep timing; 200 ms bins are too coarse, so they would work from raw 50 Hz data or a new canonical variant. |
 | Continuous sessions with segments; rest as implicit gaps (D-019) | Segment start and end times are in `labels.json` and in the `session.analyzed` event | **Door already open.** Rest durations (A, C) can be derived today. |
 | "Not a lift" rejection (τ) and the `other` class | In scope; τ tuned on the fit set | Basis for A's open-set "unknown" match. |
-| **Exercise vocabulary closed to 5 lifts** | Enums in `contracts/openapi/core-api.yaml`, `contracts/events/session-analyzed.schema.json` and `protocol/schema/labels.schema.json`; the classifier is trained on MetaMotion barbell data only | **Door partly closed.** A needs arbitrary rehab exercises defined by a demo set (template matching or per-user heads; Phase 8 personalization is a stepping stone). At the next schema version bump, prefer an open exercise id plus a registry over a fixed enum. No change now. |
+| **Exercise vocabulary closed to 5 lifts** | Enums in `contracts/openapi/core-api.yaml`, `contracts/events/session-analyzed.schema.json` and `protocol/schema/labels.schema.json`; the classifier is trained on MetaMotion barbell data only | **Door partly closed.** A needs arbitrary rehab exercises defined by a demo set (template matching or per-user heads; Phase 12 personalization is a stepping stone). At the next schema version bump, prefer an open exercise id plus a registry over a fixed enum. No change now. |
 | Set detection | Sets are marked by the user, with the countdown start (D-034) | A and C need automatic set detection. D-034 already lists it as the long-term direction, gated on a model that works on the watch. |
 | Rep counter | Fails its gates; rework planned in Phase 4 | Prerequisite for A and C (rep counts) and D (rep phases). |
-| **No web client (D-005)** | Phone app only | **Conflict.** A and C are clinician- and trainer-facing. Options: a clinician mode in the Android app, exports (PDF/CSV), or integrations into existing trainer platforms (C). A clinician web dashboard would reverse D-005; that is a future owner decision. |
+| **Web app for clinicians and trainers (D-040, amends D-005)** | Approved; not built | A and C get a web app (prescriptions, ledger, trainer view). It also closes the HTML/JS gap in tech coverage. Lifters still use only the watch and phone. |
 | **Left wrist only (D-006)** | The fixed constraint; CSF-1 rotation assumes it | **Conflict for A.** Rehab clients may need either wrist. Per-client demo templates reduce, but don't remove, the dependency on the left-wrist assumption. |
 | User scoping: foreign ids return 404 (IDOR tests) | Data visible only to its owner | A and C need explicit, revocable client → clinician/trainer sharing with consent. That is a new authorization model, not a loosening of today's checks. |
 | Health data and claims (PROJECT.md §9) | Consent flag, export and delete; "no medical diagnoses" | A sits close to clinical use. Expect privacy-law review (e.g. PHIPA for Ontario clinicians) and medical-device positioning questions. Keep outputs descriptive (done vs prescribed), never diagnostic. |
-| LLM coach: answers cite sources (Phase 6 gate) | Grounding via tools and RAG | Consistent with A's rule that summaries only restate computed facts and cite session ids. |
+| LLM coach: answers cite sources (Phase 10 gate) | Grounding via tools and RAG | Consistent with A's rule that summaries only restate computed facts and cite session ids. |
 | Accelerometer range ±8 g; saturation counted (live preview) | Measured on device | B (fast concentric phases) should check saturation rates before relying on integration. |
 
-## Prerequisites to build before or during Phases 5A–5D
+## Prerequisites to build before or during Phases 6–9
 - Keep raw native-rate data and watch timestamps exactly as today. This is the single most important enabler for B and D.
 - Keep segment timing in every result event, as `session.analyzed` already does.
 - On the next contract or schema version, replace closed exercise enums with an open id.

@@ -105,10 +105,10 @@ Each technology has a concrete job. Weak fits are called out instead of bolted o
 | **Java / Spring Boot**, Gradle, JUnit | core-api: auth, sessions, labels, history (contract-first OpenAPI) |
 | **PostgreSQL** (+pgvector), **RabbitMQ** | Relational data and embeddings; upload → inference events with retries and a dead-letter queue |
 | **Docker** on Red Hat UBI | Service images and the local stack |
-| **IBM watsonx.ai** (Granite), RAG | The coach: summaries and Q&A grounded in your history and a curated knowledge base (Phase 6) |
-| **IBM Cloud**, GitHub Actions | Code Engine, Cloud Object Storage, Databases; CI/CD (Phase 7) |
+| **IBM watsonx.ai** (Granite), RAG | The coach: summaries and Q&A grounded in your history and a curated knowledge base (Phase 10) |
+| **IBM Cloud**, GitHub Actions | Code Engine, Cloud Object Storage, Databases; CI/CD (Phase 11) |
 
-Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relational data at small scale), Maven (Android requires Gradle), a web client (out of scope; so HTML/JS is an acknowledged gap).
+Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relational data at small scale), Maven (Android requires Gradle), a consumer web client (lifters use the watch and phone; the web app is for clinicians and trainers).
 
 ## Roadmap
 | Phase | | Status |
@@ -119,16 +119,16 @@ Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relat
 | 3 | Calibration (done) and real gym data: axis fit, pass/fail gates on watch data | 🟡 in progress |
 | 4 | PyTorch model, ONNX, model registry, rep-counter rework | 🟡 started |
 | 5 | Services: core-api, inference-svc, RabbitMQ, compose, E2E tests | 🟡 started |
-| 5A | Prescription adherence ledger for clinicians and coaches | ⏳ |
-| 5B | Wrist velocity-loss feedback | ⏳ |
-| 5C | Verified session record for remote trainers | ⏳ |
-| 5D | Tempo and time-under-tension compliance | ⏳ |
-| 6 | LLM coach: Granite on watsonx.ai, RAG over pgvector, evaluation | ⏳ |
-| 7 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
-| 8 | Personalization from user corrections | ⏳ |
-| 9 | Apple Watch and iPhone apps (after the Android product) | ⏳ |
+| 6 | Prescription adherence ledger, with a web app for clinicians and coaches | ⏳ |
+| 7 | Wrist velocity-loss feedback | ⏳ |
+| 8 | Verified session record for remote trainers | ⏳ |
+| 9 | Tempo and time-under-tension compliance | ⏳ |
+| 10 | LLM coach: Granite on watsonx.ai, RAG over pgvector, evaluation | ⏳ |
+| 11 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
+| 12 | Personalization from user corrections | ⏳ |
+| 13 | Apple Watch and iPhone apps (after the Android product) | ⏳ |
 
-Phases 5A–5D are described in [`docs/ROADMAP_FEATURES.md`](docs/ROADMAP_FEATURES.md).
+Phases 6–9 are described in [`docs/ROADMAP_FEATURES.md`](docs/ROADMAP_FEATURES.md).
 
 ## Documentation
 - [`docs/PROJECT.md`](docs/PROJECT.md): the source of truth for scope, architecture, sensor spec and quality gates.
