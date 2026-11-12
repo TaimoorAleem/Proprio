@@ -7,7 +7,7 @@
 ## Ground rules for this post (owner decisions)
 - **Written as of the project's start.** It uses no results from blog 1 onwards: no leak findings, no 96.3%, no watch results. The series is published as development progresses.
 - **The 99.9% claim:** present it as "the number I got by following the tutorial" and "the first thing I want to check". Don't hint at the outcome.
-- **Section 3 stays detailed.**
+- **Section 3 ("What a wrist sensor actually measures") moved to blog 1** (2026-11-11, owner request); it lives in `post-01-draft.md` until blog 1 is written. Blog 0's sections are renumbered (11 sections).
 - **The roadmap section** includes both what I'm building now (the phases) and the future ideas A–D from [`../ROADMAP_IDEAS.md`](../ROADMAP_IDEAS.md), labelled as ideas.
 
 ## Sections
