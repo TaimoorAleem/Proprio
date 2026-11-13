@@ -43,7 +43,7 @@ Proprio is a gym logger:
 - Kafka, Cassandra, Maven, Selenium/Puppeteer (see the tech map for reasons).
 - The LLM doing signal classification.
 
-> **Product features, Phases 6–9 (in scope, D-037, D-039):** prescription adherence ledger, wrist velocity-loss feedback, a verified session record for remote trainers, and tempo compliance. Detail, dependencies and open conflicts: [`ROADMAP_FEATURES.md`](ROADMAP_FEATURES.md). They follow the backend foundation (Phase 5); the coach is now Phase 10.
+> **Product features, Phases 6–9 (in scope, D-037, D-039):** prescription adherence ledger, wrist velocity-loss feedback, a verified session record for remote trainers, and tempo compliance. Detail, dependencies and open conflicts: [`ROADMAP_FEATURES.md`](ROADMAP_FEATURES.md). They follow the backend foundation (Phase 5); Apple Watch + iPhone is Phase 10 and the coach Phase 11 (D-042).
 
 ## 3. Baseline codebase (as of 2026-10-21)
 - **Pipeline:** `run_pipeline.py` runs these steps:
@@ -255,10 +255,10 @@ Legend: [O] orchestrator (Opus) · [S] Sonnet subagent · [U] owner (physical) �
 | 7 Wrist velocity-loss feedback | after 6 | within-set velocity-loss estimate from raw 50 Hz data; haptic cue at a target loss (e.g. 20–25%) | validated against a reference (bar sensor or motion capture) before any user-facing cue; never presented as reps in reserve or proximity to failure |
 | 8 Verified session record for remote trainers | after 6 | trainer view in the web app; watch-verified sets, rest, rep duration and session length vs the logged or prescribed workout; discrepancy flags | flags match hand-verified sessions; trainer access only with client consent |
 | 9 Tempo and time-under-tension compliance | after 6 | per-rep lifting/lowering phase split; seconds per phase vs prescribed tempo; post-session first, real-time haptics later | phase timing validated against video on held-out sessions |
-| 10 LLM coach + RAG | — | coach-svc, pgvector, Granite (watsonx; Ollama fallback), golden-set eval logged with `mlflow.evaluate` and versioned prompts, phone chat | answers cite sources; ≥ 90% golden pass; injection prompts refused |
-| 11 CI/CD + IBM Cloud + security | — | full workflows, Trivy, CodeQL, ICR, Code Engine, IBM Databases/RabbitMQ provisioning, MLflow server (Postgres backend, COS artifacts, auth; reachable only by CI and services) | tag → deployed; phone works against cloud; all gates green |
-| 12 Personalization + stretch | — | per-user heads via RabbitMQ jobs; stretch items | per-user check improves before activation |
-| 13 Apple Watch + iPhone (after the Android product) | later | watchOS recorder (Swift, Core Motion, workout session), iPhone app (WatchConnectivity, generated API client), Apple Watch device profile + calibration, Raw Format v1 writer in Swift | Swift writer passes the `protocol/golden` conformance tests; calibration gate passes on an Apple Watch; same backend, unchanged contracts |
+| 10 Apple Watch + iPhone (after the Android features) | after 9 | watchOS recorder (Swift, Core Motion, workout session), iPhone app (WatchConnectivity, generated API client), Apple Watch device profile + calibration, Raw Format v1 writer in Swift | Swift writer passes the `protocol/golden` conformance tests; calibration gate passes on an Apple Watch; same backend, unchanged contracts |
+| 11 LLM coach + RAG | — | coach-svc, pgvector, Granite (watsonx; Ollama fallback), golden-set eval logged with `mlflow.evaluate` and versioned prompts, phone chat | answers cite sources; ≥ 90% golden pass; injection prompts refused |
+| 12 CI/CD + IBM Cloud + security | — | full workflows, Trivy, CodeQL, ICR, Code Engine, IBM Databases/RabbitMQ provisioning, MLflow server (Postgres backend, COS artifacts, auth; reachable only by CI and services) | tag → deployed; phone works against cloud; all gates green |
+| 13 Personalization + stretch | — | per-user heads via RabbitMQ jobs; stretch items | per-user check improves before activation |
 
 ## 8. Testing and CI/CD
 - **Python:** pytest + hypothesis, golden files (Raw v1 ↔ CSF), model-regression gate (against the MLflow `production` alias), RAG golden set (MLflow evaluation runs).
