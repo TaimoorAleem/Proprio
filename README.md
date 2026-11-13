@@ -105,8 +105,8 @@ Each technology has a concrete job. Weak fits are called out instead of bolted o
 | **Java / Spring Boot**, Gradle, JUnit | core-api: auth, sessions, labels, history (contract-first OpenAPI) |
 | **PostgreSQL** (+pgvector), **RabbitMQ** | Relational data and embeddings; upload → inference events with retries and a dead-letter queue |
 | **Docker** on Red Hat UBI | Service images and the local stack |
-| **IBM watsonx.ai** (Granite), RAG | The coach: summaries and Q&A grounded in your history and a curated knowledge base (Phase 10) |
-| **IBM Cloud**, GitHub Actions | Code Engine, Cloud Object Storage, Databases; CI/CD (Phase 11) |
+| **IBM watsonx.ai** (Granite), RAG | The coach: summaries and Q&A grounded in your history and a curated knowledge base (Phase 11) |
+| **IBM Cloud**, GitHub Actions | Code Engine, Cloud Object Storage, Databases; CI/CD (Phase 12) |
 
 Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relational data at small scale), Maven (Android requires Gradle), a consumer web client (lifters use the watch and phone; the web app is for clinicians and trainers).
 
@@ -123,10 +123,10 @@ Deliberately **not** used: Kafka (no replay or streaming need), Cassandra (relat
 | 7 | Wrist velocity-loss feedback | ⏳ |
 | 8 | Verified session record for remote trainers | ⏳ |
 | 9 | Tempo and time-under-tension compliance | ⏳ |
-| 10 | LLM coach: Granite on watsonx.ai, RAG over pgvector, evaluation | ⏳ |
-| 11 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
-| 12 | Personalization from user corrections | ⏳ |
-| 13 | Apple Watch and iPhone apps (after the Android product) | ⏳ |
+| 10 | Apple Watch and iPhone apps (after the Android features) | ⏳ |
+| 11 | LLM coach: Granite on watsonx.ai, RAG over pgvector, evaluation | ⏳ |
+| 12 | CI/CD to IBM Cloud, security review, battery tuning | ⏳ |
+| 13 | Personalization from user corrections | ⏳ |
 
 Phases 6–9 are described in [`docs/ROADMAP_FEATURES.md`](docs/ROADMAP_FEATURES.md).
 

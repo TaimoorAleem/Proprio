@@ -17,7 +17,7 @@ That sentence is where Proprio starts. A product only matters for people the mod
 
 I built the pipeline myself, following the YouTube series Ebbelaar later made from the project [2]. My best model scored **99.9% accuracy**. That's higher than anything in the original report, on the same data, and it made me suspicious rather than happy. A number that good deserves a hard second look before I build anything on top of it. That gives me my first question:
 
-> **Question 1:** How accurate is the original pipeline on people it has never seen, when tested fairly?
+> **Research Question 1:** How accurate is the original pipeline on people it has never seen, when tested fairly?
 
 Two more questions come up along the way.
 
@@ -88,11 +88,11 @@ That last one is the first job, and it's exactly question 1. If the number doesn
 
 But even if it does hold up, the first gap is still there. A model that only works on the sensor it was trained on can't become a product, which raises the second question:
 
-> **Question 2:** Can a model trained on research-sensor data work on a consumer smartwatch, once units, axes and sampling rates are converted?
+> **Research Question 2:** Can a model trained on research-sensor data work on a consumer smartwatch, once units, axes and sampling rates are converted?
 
 ## Who actually needs this
 
-Before putting months into this, I had to ask myself who would actually need it. I started out wanting a rep counter for lifters like me. Turns out, that already exists in several forms. What I couldn't find was a way for a physiotherapist or a coach to know whether the exercises they prescribed actually happened.
+Before putting months into this, I had to ask myself who would actually need it. I started out wanting a rep counter for lifters like me. Turns out, that already exists in several forms. What I couldn't find was a watch that tells you, and the people who coach you, what actually happened in a workout, beyond a rep count.
 
 ### Lifters already have options, and they're frustrating
 
@@ -100,25 +100,24 @@ Automatic exercise and rep tracking already ships, or at least is attempted, on 
 
 So "recognize the exercise and count the reps" isn't, on its own, a good enough reason for Proprio to exist. It's still the foundation everything else needs though, and it's worth getting right.
 
-### The unsolved problem: did the prescribed exercise actually happen?
+### What a rep count doesn't tell you
 
-The more interesting gap is **unsupervised, prescribed strength work**: the exercises a physiotherapist or coach tells you to do at home.
+Once I started looking past rep counts, four questions came up, each from a different kind of person.
 
-- **Non-adherence is common.** A 2021 paper sums up earlier research: "patient non-adherence with rehabilitation programs is 50%-70%" [5].
-- **Self-reports overstate it.** In a 2018 study, people with knee pain kept an exercise diary while an accelerometer hidden in their ankle weight counted what they actually did. The diaries recorded a median of **220** exercises; the hidden sensor counted **176** [6]. Nobody was lying badly, but the diaries were consistently optimistic.
-- **Clinicians lack tools.** A 2023 survey of 149 clinicians found that the most common barrier to measuring adherence was simply not having a tool to do it [7].
-- **The approach works in research.** Researchers in Toronto (Sunnybrook and the Holland Centre) showed that smartwatch inertial data could recognize shoulder physiotherapy exercises [13]. They then designed a study where data labelled in the clinic is used to classify patients' home sessions [14]. Wrist accelerometers also show up as adherence measures in clinical trials [8].
+1) **Clinicians: did the prescribed exercise actually happen?** Physiotherapists and coaches prescribe strength work that clients do at home, unsupervised. A 2021 paper sums up earlier research: "patient non-adherence with rehabilitation programs is 50%-70%" [5]. A 2023 survey of 149 clinicians found that the most common barrier to measuring adherence was simply not having a tool to do it [7]. Researchers in Toronto (Sunnybrook and the Holland Centre) have shown that smartwatch inertial data can recognize shoulder physiotherapy exercises [13], and designed a study where data labelled in the clinic is used to classify patients' home sessions [14]. Wrist accelerometers also show up as adherence measures in clinical trials [8]. But there's no product a clinician can just go and buy.
+
+2. **Remote trainers: what did the client actually do?** Online coaching runs on what clients log themselves, and self-reports run optimistic. In a 2018 study, people with knee pain kept an exercise diary while an accelerometer hidden in their ankle weight counted what they actually did. The diaries recorded a median of **220** exercises; the hidden sensor counted **176** [6]. Nobody was lying badly, but the diaries were consistently optimistic.
 
 ![Bar chart: median exercises recorded, 220 in the diary vs 176 by the hidden accelerometer](assets/post-00/fig07-diary-vs-sensor.png)
 *Figure 2. Diaries overstate what people actually do. Data from Nicolson et al. (2018) [6]; the accelerometer was hidden in an ankle weight.*
 
-### Wrists can measure more than reps
+3. **Lifters: how fast is the bar moving?** Velocity-based training uses bar speed to guide how hard a set is, and it usually needs a sensor mounted on the bar. In a 2023 study, a wrist-worn Apple Watch estimated mean barbell squat velocity about as well as bar-mounted sensors [15]. There's early work on estimating effort too, though only as a preprint so far [17]. Reviews of commercial training sensors also warn that validation is often weak [16], which is a good reason to measure things carefully instead of trusting the marketing.
 
-In a 2023 study, a wrist-worn Apple Watch estimated mean barbell squat velocity about as well as sensors mounted on the bar [15]. There's early work on estimating effort too, though only as a preprint so far [17]. Reviews of commercial training sensors also warn that validation is often weak [16], which is a good reason to measure things carefully instead of trusting the marketing.
+4. **Anyone following a prescribed tempo: was each rep done at the right speed?** Tempo prescriptions (for example, three seconds down and one second up) are common in tendon rehab and tempo training, but nobody checks them except the person counting in their head.
 
-And that's the opening. Research has shown the idea works, but there's no product a clinician can just go and buy. That's the gap Proprio is built around, and it leads to the third question:
+That's the opening. The research says a wrist can measure a lot more than reps, but none of it is in a product you can buy. That's the gap Proprio is built around, and it leads to the third question:
 
-> **Question 3:** Can a wrist-worn watch verify prescribed home exercise (sets, reps, rest) well enough for a clinician or coach to rely on it?
+> **Research Question 3:** Can a wrist-worn watch measure what actually happened in a workout (sets, reps, rest, bar speed, tempo) well enough for lifters, coaches and clinicians to rely on it?
 
 ## Meet Proprio
 
@@ -130,12 +129,9 @@ And that's the opening. Research has shown the idea works, but there's no produc
 - **A web app for clinicians and trainers** lets them prescribe exercises and see what their clients actually did, only with the client's consent.
 - **An AI coach** explains your training in plain language, based on your own recorded history instead of generic advice.
 
-I'm starting with a Galaxy Watch and an Android phone, simply because that's the watch I have to test on. An Apple Watch and iPhone app will come once the Android product is done. And since the raw recordings get converted on the server, supporting a new watch mostly means describing its sensor (units, axes, rates) and running a calibration session, not training a new model. That's the bet behind question 2.
+I'm starting with a Galaxy Watch and an Android phone, simply because that's the watch I have to test on. An Apple Watch and iPhone app will come once the Android features are done. And since the raw recordings get converted on the server, supporting a new watch mostly means describing its sensor (units, axes, rates) and running a calibration session, not training a new model. That's the bet behind question 2.
 
-Two principles run through all of it:
-
-1. **Keep the raw data.** The watch records exactly what its sensors measured, unconverted. Every conversion happens later, in one shared piece of code, so if it turns out to be wrong, it can be fixed and re-run.
-2. **Measure before claiming.** Every accuracy number in this series will come from a test designed to look like real use, with its limitations stated right next to it.
+The watch records exactly what its sensors measured, unconverted. Every conversion happens later, in one shared piece of code, so if it turns out to be wrong, it can be fixed and re-run.
 
 ## The roadmap
 
@@ -152,39 +148,33 @@ The work comes in three stages, and each phase will get at least one part. Stage
 | 4 | **Better models.** A small deep-learning model and a reworked rep counter, if the classic models fall short on the watch. |
 | 5 | **Services.** A backend that receives recordings from the phone, analyzes them, and returns results reliably. |
 
-### Stage 2: make it useful (Phases 6–9)
+### Stage 2: make it useful (Phases 6–10)
 
-This is my answer to "who actually needs this?": the things a wrist-worn strength tracker can do that the crowded market doesn't.
+This is my answer to "who actually needs this?". Each phase takes one of the four questions from that section: clinicians (Phase 6), lifters (Phase 7), remote trainers (Phase 8) and tempo (Phase 9). Phase 10 then brings all of it to Apple Watch and iPhone.
 
 | Phase | Goal, in plain words |
 |---|---|
-| 6 | **Prescription adherence ledger.** A clinician or coach prescribes exercises on the web app and records a short demo of each on the client's watch. At home, the system detects the sets, matches them to the prescription and shows both sides a weekly ledger of done vs prescribed. |
-| 7 | **Wrist velocity-loss feedback** (the riskiest feature). Estimate how much the lift slows down within a set, from the wrist alone, and buzz at a chosen point. It must never claim to tell you how close you are to failure. |
+| 6 | **Prescription adherence ledger.** A clinician or coach prescribes exercises on the web app. At home, the watch detects the sets and matches them to the prescription, and both sides see a weekly ledger of done vs prescribed. |
+| 7 | **Wrist velocity-loss feedback** (the riskiest feature). Estimate how much the lift slows down within a set, from the wrist alone, and buzz at a chosen point. |
 | 8 | **A verified session record for remote trainers.** Online coaching shows what clients *say* they did. Trainers see what the watch saw instead: "logged 4 sets, watch saw 2". |
 | 9 | **Tempo and time-under-tension compliance.** Split each rep into its lifting and lowering phases and compare them with a prescribed tempo, as used in tendon rehab. After the session first, real-time buzzes later. |
+| 10 | **Apple Watch and iPhone.** The same product on Apple hardware, once the Android features are done. |
 
-### Stage 3: grow it (Phases 10–13)
+### Stage 3: grow it (Phases 11–13)
 
 | Phase | Goal, in plain words |
 |---|---|
-| 10 | **The coach.** A language model (IBM Granite) that answers questions about your training and cites where each answer came from. |
-| 11 | **Ship it.** Automated testing, a security review, and deployment to the cloud. |
-| 12 | **Personalization.** Use each user's corrections to improve the model for that user. |
-| 13 | **Apple Watch and iPhone.** The same product on Apple hardware, once the Android version is done. |
+| 11 | **The coach.** A language model (IBM Granite) that answers questions about your training and cites where each answer came from. |
+| 12 | **Ship it.** Automated testing, a security review, and deployment to the cloud. |
+| 13 | **Personalization.** Use each user's corrections to improve the model for that user. |
 
-## Doing this responsibly
+## Limitations
 
-Phases 6 and 8 bring Proprio pretty close to healthcare. That comes with rules on medical software and health data, in Canada [18] and in the US [19], and it's exactly why they come after a foundation that's been shown to work. A few rules are fixed from the start:
+**No results yet.** Everything in this part is a plan. The numbers will come in later parts, including the ones that don't go my way.
 
-- **Consent.** A clinician or trainer only sees a client's data if the client shares it, and the client can take that access back at any time.
-- **No overclaiming.** Velocity-loss feedback is validated against a reference before any cue reaches a user, and it's never presented as telling you how close you are to failure.
-- **Grounded AI.** Any AI summary may only restate facts the system computed, and must point to the sessions they came from.
+**A small dataset.** The original data comes from five people, all doing the same five lifts. That's enough to learn from, but not enough to prove a product works for everyone.
 
-## What I don't know yet
-
-- **No results yet.** Everything in this part is a plan. The numbers come in later parts, including the ones that don't go my way.
-- **A small dataset.** The original data comes from five people, all doing the same five lifts. That's enough to learn from, but not enough to prove a product works for everyone.
-- **One platform and one wrist to start.** Proprio starts on Galaxy Watch and Android, worn on the left wrist. Other watches, and the other wrist, need their own testing.
+**One platform and one wrist to start.** Proprio starts on Galaxy Watch and Android, worn on the left wrist. Other watches, and the other wrist, need their own testing.
 
 ## What's next
 
@@ -213,5 +203,3 @@ I'll be writing one part per phase as I build it, and that includes the things t
 15. Achermann, B. et al. (2023). Velocity-based strength training: the validity and personal monitoring of barbell velocity with the Apple Watch. *Sports*, 11(7), 125. https://www.mdpi.com/2075-4663/11/7/125
 16. Weakley, J. et al. (2021). The validity and reliability of commercially available resistance training monitoring devices: a systematic review. *Sports Medicine*, 51, 443–502. https://doi.org/10.1007/s40279-020-01382-w
 17. Thomas, J. & Wahlström, J. (2025). Estimation of resistance training RPE using inertial sensors and electromyography. arXiv:2510.03197 (preprint). https://arxiv.org/abs/2510.03197
-18. Health Canada (2019). *Guidance Document: Software as a Medical Device (SaMD): Definition and Classification.* https://www.canada.ca/en/health-canada/services/drugs-health-products/medical-devices/application-information/guidance-documents/software-medical-device-guidance-document.html
-19. U.S. Food and Drug Administration (2026). *General Wellness: Policy for Low Risk Devices* (updated guidance). https://www.fda.gov/regulatory-information/search-fda-guidance-documents/general-wellness-policy-low-risk-devices

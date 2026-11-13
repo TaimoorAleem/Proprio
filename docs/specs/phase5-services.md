@@ -11,7 +11,7 @@
 ## 1. Goal
 A phone uploads a finished watch session. The backend stores it, analyzes it asynchronously, and returns per-segment exercise predictions and rep counts, merged with the user's own labels. The whole thing runs locally with `docker compose up` and is covered by automated end-to-end tests.
 
-**Not in Phase 5:** the product features (Phases 6–9), the coach (Phase 10), cloud deployment (Phase 11) and personalization (Phase 12). The phone app gets its upload integration in task V4.
+**Not in Phase 5:** the product features (Phases 6–9), Apple Watch + iPhone (Phase 10), the coach (Phase 11), cloud deployment (Phase 12) and personalization (Phase 13). The phone app gets its upload integration in task V4.
 
 ## 2. Architecture (local)
 ```
@@ -97,7 +97,7 @@ A phone uploads a finished watch session. The backend stores it, analyzes it asy
 
 ## 5. Local stack (`deploy/compose.yaml`)
 - **Services:**
-  - `postgres` (`pgvector/pgvector:pg16`; pgvector arrives now for the coach, Phase 10);
+  - `postgres` (`pgvector/pgvector:pg16`; pgvector arrives now for the coach, Phase 11);
   - `rabbitmq` (`rabbitmq:3-management`, with exchange and queues declared by the services);
   - `minio` (plus a `createbuckets` init job);
   - `core-api`;
@@ -147,7 +147,7 @@ A phone uploads a finished watch session. The backend stores it, analyzes it asy
 - [ ] Problem details with no stack traces.
 - [ ] Login rate limiting.
 - [ ] Non-root UBI images.
-- [ ] Dependency scanning comes in Phase 11.
+- [ ] Dependency scanning comes in Phase 12.
 
 ## 8. Tasks
 | id | who | depends on | scope |
