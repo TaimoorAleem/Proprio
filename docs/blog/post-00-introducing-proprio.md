@@ -54,7 +54,7 @@ So here's the honest starting point: a thoughtful study that was upfront about i
 Here's the whole pipeline, from raw files to a predicted exercise:
 
 ```mermaid
-flowchart TD
+flowchart LR
     A["Raw CSV files,<br/>one per sensor per set"]
     B["Merge and Resample<br/>200 ms steps<br/>(5 per second)"]
     C["Outlier Handling<br/>(IQR · Chauvenet's Criterion · Local Outlier Factor)"]
