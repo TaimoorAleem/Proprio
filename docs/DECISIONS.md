@@ -160,3 +160,12 @@ The owner rejected letter suffixes (D-037's 5A–5D). The features become their 
 
 **D-040 · 2026-11-11 · A web app for clinicians and trainers (amends D-005)**
 The owner approved a web client for clinicians and trainers. Phase 6 needs it to create prescriptions and read adherence ledgers; Phase 8 needs a trainer view of verified sessions. Lifters still use only the watch and the phone, so there is no consumer web client. This closes the HTML/JS/Ajax gap in tech coverage. Access to a client's data is always consented by the client and revocable (the current user-only scoping is extended, not loosened).
+
+**D-041 · 2026-11-12 · Blog series during the build; research paper after Proprio**
+The owner will publish the multi-part series on Medium as the project progresses, and write a research paper once Proprio is finished. The two stay separate: the blog parts are written as blogs (conversational, no abstract or numbered sections), and the paper is written later from the repo's evidence. `docs/PAPER_PLAN.md` tracks candidate contributions (strongest: research sensor → consumer smartwatch), the evidence behind each claim and the ethics status per dataset. No data from anyone other than the owner is collected for research use until a research ethics board approves it, ideally through an academic collaborator. Blog 0 now treats Ebbelaar's study, not the tutorial, as the starting point; the tutorial is credited as how the owner built the pipeline.
+
+**D-042 · 2026-11-12 · Apple Watch + iPhone becomes Phase 10**
+The owner moved Apple Watch + iPhone to the end of the product-feature stage, right after Phase 9. New order: 10 Apple Watch + iPhone, 11 LLM coach, 12 CI/CD + IBM Cloud + security, 13 personalization. Decisions written before this date keep their numbers: in D-039…D-041, read coach 10 → 11, cloud 11 → 12, personalization 12 → 13, Apple 13 → 10.
+
+**D-043 · 2026-11-12 · Blog platform: dev.to instead of Medium (amends D-038)**
+The series moves to dev.to. It renders Markdown natively, including tables, and has a built-in series feature, so posts need far less conversion than for Medium. It doesn't render Mermaid, so diagrams are still exported to images. Diagrams stay as Mermaid in the repo drafts. The Medium draft of blog 0 is abandoned (not published).

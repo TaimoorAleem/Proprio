@@ -12,7 +12,8 @@
 - About 1,500–2,500 words.
 - A hook in the first paragraph.
 - 2–4 "idea in plain words" boxes, reused from the journal.
-- Few charts or diagrams.
+- One or two charts or diagrams.
+- A "what I'd tell my past self" ending.
 - Links into the repo for evidence: one link per claim, to the exact report or decision.
 
 ## Posts

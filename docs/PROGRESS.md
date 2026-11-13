@@ -14,8 +14,8 @@
 - [x] U1: calibration recording (2026-10-23, 275 s, watch in hand). All checks pass; see `docs/reports/u1-calibration.md`
 - [ ] U2: two gym sessions × 20 sets, left wrist, with video if possible. Session 1 planned Sunday 2026-10-25
 - [ ] U3: two friends × 10 sets, plus their consent forms (after Phase 2)
-- [ ] Install and smoke-test watch and phone builds (Phases 2, 5, 11)
-- [ ] Create IBM Cloud account; approve resources and secrets (Phase 11)
+- [ ] Install and smoke-test watch and phone builds (Phases 2, 5, 12)
+- [ ] Create IBM Cloud account; approve resources and secrets (Phase 12)
 
 ## Blockers / open questions
 - Resolved (D-024): Samsung Freecess. Keeping the recording screen on (dimmed) keeps the process TOP; verified on the wrist with 0 gaps.
@@ -104,20 +104,25 @@
 - [ ] [O] Phase-split method + video-validated protocol
 - [ ] [S] Post-session tempo report; [S] real-time haptics later
 
-### Phase 10: LLM coach + RAG
+### Phase 10: Apple Watch + iPhone (D-036, D-042)
+- [ ] [S] watchOS recorder, iPhone app, Swift Raw Format v1 writer (golden conformance), Apple Watch profile + calibration
+
+### Phase 11: LLM coach + RAG
 - [ ] [O] KB sources, prompts, tool schema, eval rubric
 - [ ] [S] coach-svc; [S] golden set + nightly CI; phone chat UI
 
-### Phase 11: CI/CD + IBM Cloud + security
+### Phase 12: CI/CD + IBM Cloud + security
 - [ ] [S] Workflows, scans, ICR, Code Engine, IBM Databases/RabbitMQ provisioning
 - [ ] [O] Security review
 - [ ] [U] IBM Cloud account and secrets
 
-### Phase 12: personalization + stretch
+### Phase 13: personalization + stretch
 - [ ] [S] Per-user heads via RabbitMQ jobs
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-12: Apple Watch + iPhone moved to Phase 10, right after the product features; coach → 11, cloud → 12, personalization → 13 (D-042). Blog platform switched to dev.to (D-043); blog 0 renamed `post-00-introducing-proprio.md`.
+- 2026-11-12: Blog 0 reworked (study-first framing, three questions introduced where they arise, part wording, ethics and limitations sections; pipeline detail moved to the Part 1 draft). Paper after Proprio, series during the build (D-041); `docs/PAPER_PLAN.md` added.
 - 2026-11-11: Features renumbered as Phases 6–9 after the backend foundation (coach → 10, cloud → 11, personalization → 12, Apple → 13; D-039). Web app for clinicians and trainers approved (D-040).
 - 2026-11-11: Features A–D committed as Phases 5A–5D between Phase 5 and Phase 6 (D-037); `ROADMAP_IDEAS.md` renamed `ROADMAP_FEATURES.md`. README architecture diagram converted to Mermaid. Blog platform: Medium (D-038).
 - 2026-11-11: Apple Watch + iPhone support added as Phase 9, after the Android product (D-036).
