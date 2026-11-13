@@ -118,6 +118,7 @@
 - [ ] Stretch: Kotlin live counter, Helm/kind, Granite LoRA
 
 ## Session log
+- 2026-11-12: Blog 0 reworked (study-first framing, three questions introduced where they arise, part wording, ethics and limitations sections; pipeline detail moved to the Part 1 draft). Paper after Proprio, series during the build (D-041); `docs/PAPER_PLAN.md` added.
 - 2026-11-11: Features renumbered as Phases 6–9 after the backend foundation (coach → 10, cloud → 11, personalization → 12, Apple → 13; D-039). Web app for clinicians and trainers approved (D-040).
 - 2026-11-11: Features A–D committed as Phases 5A–5D between Phase 5 and Phase 6 (D-037); `ROADMAP_IDEAS.md` renamed `ROADMAP_FEATURES.md`. README architecture diagram converted to Mermaid. Blog platform: Medium (D-038).
 - 2026-11-11: Apple Watch + iPhone support added as Phase 9, after the Android product (D-036).

@@ -883,6 +883,11 @@ I'd lost count on a few sets. I used the raw 50 Hz signal (band-passed first pri
   - I verified the rewritten branch tips matched the originals except for the file.
   - I force-pushed with leases. The lease caught an unexpected remote commit, a README edit of mine, which turned out to be already included, and I checked that before anything was overwritten.
   - Caveat: GitHub may still serve the old commits by their hash until its garbage collection runs.
+- **Planned the public write-up (2026-11-11 to 11-12).** The series goes on Medium as the build progresses; a research paper comes after Proprio is finished (D-038, D-041).
+  - Blog 0 went through several drafts. The biggest change was the starting point: Ebbelaar's study, and its own 85% on people it had never seen, rather than the tutorial. The tutorial is still credited as how I built my 99.9% version.
+  - Three questions frame the series, each raised where the story reaches it: does the original pipeline hold up on new people, does a model trained on a research sensor work on a smartwatch, and can a watch verify prescribed home exercise?
+  - I tried formatting blog 0 like a research article (abstract, keywords, numbered sections) and reverted it: a blog in academic costume isn't a paper, and it loses the voice. The paper will be written separately from the repo's evidence (`docs/PAPER_PLAN.md`).
+  - Lesson: research using other people's data needs ethics approval before collection, not after. My own sessions are fine; friends' sessions and anything clinical wait for an approved protocol.
 
 ## Upcoming parts (to be written as they happen)
 
